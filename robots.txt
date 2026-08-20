@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.taxi-conventionne06.fr/sitemap.xml
