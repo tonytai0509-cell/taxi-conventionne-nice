@@ -12,12 +12,15 @@
   --paper: #ffffff;
   --paper-alt: #f6f4ee;
   --line: #e6e1d4;
+  --med-green: #1e8e3e;
+  --med-green-light: #e7f6ec;
   --shadow-md: 0 12px 30px -12px rgba(11, 31, 58, 0.25);
   --shadow-lg: 0 24px 60px -20px rgba(11, 31, 58, 0.35);
   --radius: 14px;
   --font-head: "Archivo Black", "Arial Black", sans-serif;
   --font-script: "Dancing Script", cursive;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif-logo: "Playfair Display", Georgia, "Times New Roman", serif;
 }
 
 * { box-sizing: border-box; }
@@ -89,8 +92,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 }
 .btn-outline:hover { background: rgba(255, 255, 255, 0.1); }
 .btn-call {
-  border-color: var(--line);
-  color: var(--navy-900);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
   padding: 10px 16px;
   font-size: 0.9rem;
 }
@@ -106,22 +109,22 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
+  background: var(--navy-950);
+  border-bottom: 1px solid rgba(200, 162, 74, 0.2);
 }
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding-top: 28px;
-  padding-bottom: 28px;
+  padding-top: 20px;
+  padding-bottom: 20px;
 }
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--navy-900);
+  gap: 14px;
+  color: #fff;
 }
 .logo-icon { flex: none; }
 .logo-text-block {
@@ -130,17 +133,18 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   line-height: 1.2;
 }
 .logo-name {
-  font-family: var(--font-head);
-  font-size: 0.92rem;
-  letter-spacing: 0.01em;
-  color: var(--navy-900);
+  font-family: var(--font-serif-logo);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+  color: #fff;
   white-space: nowrap;
 }
 .logo-name .logo-script {
   font-family: var(--font-script);
   font-weight: 700;
-  font-size: 1.25rem;
-  color: var(--navy-900);
+  font-size: 1.5rem;
+  color: var(--gold-500);
   line-height: 0.7;
   margin-left: 2px;
 }
@@ -159,7 +163,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   font-weight: 500;
   font-size: 0.94rem;
 }
-.main-nav a { color: var(--navy-800); position: relative; padding: 4px 0; }
+.main-nav a { color: rgba(255, 255, 255, 0.85); position: relative; padding: 4px 0; }
 .main-nav a:hover, .main-nav a.is-active { color: var(--gold-500); }
 
 .header-actions { display: flex; align-items: center; gap: 14px; }
@@ -168,19 +172,20 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   display: none;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: #fff;
+  gap: 6px;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  border: 1.5px solid var(--gold-500);
+  background: transparent;
   cursor: pointer;
 }
 .nav-toggle span {
-  width: 18px;
-  height: 2px;
-  background: var(--navy-900);
+  width: 20px;
+  height: 2.4px;
+  background: #fff;
   margin: 0 auto;
+  border-radius: 1px;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -214,190 +219,23 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   background: linear-gradient(180deg, transparent 55%, var(--hero-navy) 100%);
   pointer-events: none;
 }
-/* ===== Hero status badge (floating card over the photo) =====
-   Directional-sign silhouette (straight left/top, pointed right edge)
-   traced by an SVG path rather than border-radius, per exact spec.
-   The badge itself carries no background/border — those live on the
-   SVG's <path> so the fill follows the asymmetric outline precisely.
-   Content (.status-badge-left/-text/-call) is promoted to its own
-   stacking level (position:relative + z-index) to paint above the
-   absolutely-positioned SVG: non-positioned in-flow boxes paint BEFORE
-   positioned ones in CSS stacking order regardless of DOM order, so
-   without this the shape would cover the icon/text. */
-.hero-status-badge {
+/* ===== Hero status badge (image banner over the photo) =====
+   Provided as a finished transparent PNG — no CSS-built shape. */
+.lien-bandeau-centrale {
   position: absolute;
   z-index: 4;
-  top: 20px;
-  left: 20px;
-  width: 390px;
-  min-height: 85px;
-  padding: 17px 22px 14px 18px;
-  display: grid;
-  grid-template-columns: 48px max-content;
-  align-items: center;
-  column-gap: 8px;
-  color: #fff;
-  text-decoration: none;
-  overflow: visible;
-}
-.badge-shape {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 12px 24px rgba(4, 14, 29, 0.32));
-  pointer-events: none;
-}
-.badge-shape path {
-  fill: rgba(7, 26, 51, 0.9);
-  stroke: #d7ae55;
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-  transition: stroke 0.15s ease;
-}
-.hero-status-badge:hover .badge-shape path,
-.hero-status-badge:focus-visible .badge-shape path {
-  stroke: #e3bd68;
-}
-.hero-status-badge:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.9);
-  outline-offset: 3px;
-}
-.status-badge-tab {
-  position: absolute;
   top: 0;
   left: 0;
-  min-width: 120px;
-  height: 21px;
-  padding: 0 15px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #071a33;
-  background: #d7ae55;
-  border-radius: 0 0 8px 0;
-  font: 800 9.5px/1 "Inter", sans-serif;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  z-index: 1;
-}
-.status-badge-left {
-  position: relative;
-  z-index: 1;
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  color: #d7ae55;
-}
-.status-headset {
-  width: 34px;
-  height: 34px;
-}
-.status-dot-wrap {
-  position: absolute;
   right: 0;
-  bottom: 1px;
-  width: 13px;
-  height: 13px;
-  display: grid;
-  place-items: center;
-}
-.status-dot,
-.status-dot-halo {
-  position: absolute;
-  border-radius: 50%;
-}
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: #20d878;
-  box-shadow: 0 0 0 2px rgba(7, 26, 51, 0.9);
-}
-.status-dot-halo-1 {
-  width: 13px;
-  height: 13px;
-  background: rgba(32, 216, 120, 0.24);
-}
-.status-dot-halo-2 {
-  width: 20px;
-  height: 20px;
-  background: rgba(32, 216, 120, 0.1);
-}
-.status-badge-text {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-}
-.status-badge-title,
-.status-badge-sub {
   display: block;
-  white-space: nowrap;
 }
-.status-badge-title {
-  color: #fff;
-  font: 700 18px/1.12 "Inter", sans-serif;
-  letter-spacing: -0.025em;
-}
-.status-badge-sub {
-  color: #d7ae55;
-  font: 700 14px/1.2 "Inter", sans-serif;
-}
-.status-badge-call {
-  position: absolute;
-  right: 72px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 48px;
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  border: 1px solid #d7ae55;
-  border-radius: 50%;
-  background: rgba(7, 26, 51, 0.9);
-}
-.status-badge-call svg {
-  width: 16px;
-  height: 16px;
-}
-.status-sparkle {
-  position: absolute;
-  z-index: 1;
-  color: #d7ae55;
-  font-size: 9px;
-  line-height: 1;
-  opacity: 0.8;
-  pointer-events: none;
-}
-.status-sparkle-1 {
-  top: 11px;
-  right: 48px;
-}
-.status-sparkle-2 {
-  right: 73px;
-  bottom: 10px;
-  font-size: 7px;
-}
-
-@media (max-width: 420px) {
-  .hero-status-badge {
-    top: 16px;
-    min-height: 85px;
-    padding: 15px 18px 11px 14px;
-  }
-  .status-sparkle-1 {
-    right: 43px;
-  }
-  .status-sparkle-2 {
-    display: none;
-  }
+.hero-photo .bandeau-centrale {
+  display: block;
+  width: calc(100% - 32px);
+  max-width: 1100px;
+  height: auto;
+  margin: 16px auto 0;
+  object-fit: contain;
 }
 
 .hero-content {
@@ -683,124 +521,95 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 }
 .trust-list li svg { color: var(--gold-500); flex: none; }
 
-/* ===== Reservation ===== */
-.reserve-inner {
+/* ===== Reservation (card-based flow, modelled on the centrale's own
+   daily-use reservation tool) ===== */
+.reserve-inner-v2 {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 56px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 48px;
   align-items: start;
 }
 .reserve-text a { color: var(--gold-500); font-weight: 600; }
-.reserve-form {
+
+.reserve-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.rcard {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 32px;
-  box-shadow: var(--shadow-lg);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
+  padding: 24px 24px 18px;
+  box-shadow: var(--shadow-md);
 }
-.form-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.reserve-form { min-width: 0; }
-.form-row input,
-.form-row select,
-.form-row textarea { min-width: 0; width: 100%; }
-.form-row label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--navy-900);
+.rcard-title { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.rcard-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--navy-900); color: #fff; font-weight: 700; font-size: 0.8rem;
+  display: flex; align-items: center; justify-content: center; flex: none;
 }
-.form-row input,
-.form-row select,
-.form-row textarea {
-  font: inherit;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1.5px solid var(--line);
-  background: var(--paper-alt);
-  color: var(--ink);
+.rcard-title h3 {
+  margin: 0; font-size: 1rem; color: var(--navy-900);
+  text-transform: none; letter-spacing: normal;
+  font-family: var(--font-body); font-weight: 700;
 }
-.form-row input:focus,
-.form-row select:focus,
-.form-row textarea:focus {
-  outline: none;
-  border-color: var(--gold-500);
-  background: #fff;
+
+.rcard label { display: block; font-weight: 600; font-size: 0.85rem; color: var(--navy-900); margin: 14px 0 6px; }
+.rcard label:first-of-type { margin-top: 0; }
+
+.rline { display: flex; gap: 10px; }
+.rline > div { flex: 1; min-width: 0; }
+
+.rfield { position: relative; }
+.rfield svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #8a95a3; pointer-events: none; }
+.rfield input {
+  width: 100%; font: inherit; padding: 12px 14px 12px 42px;
+  border-radius: 10px; border: 1.5px solid var(--line);
+  background: var(--paper-alt); color: var(--ink);
 }
-.form-note {
-  font-size: 0.8rem;
-  color: var(--ink-soft);
-  margin: 4px 0 0;
+.rfield input:focus { outline: none; border-color: var(--gold-500); background: #fff; }
+
+.rchoix { display: flex; gap: 10px; margin: 6px 0 4px; }
+.rchoix label {
+  flex: 1; margin: 0; display: flex; align-items: center; gap: 8px; padding: 12px;
+  border: 1.5px solid var(--line); border-radius: 10px; font-weight: 600; font-size: 0.88rem;
+  color: var(--ink); cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.form-fieldset {
-  border: none;
-  margin: 0;
-  padding: 0;
+.rchoix input { display: none; }
+.rchoix-texte { flex: 1; }
+.rchoix-coche {
+  display: none; width: 20px; height: 20px; border-radius: 50%; flex: none;
+  align-items: center; justify-content: center; color: #fff;
 }
-.form-fieldset legend {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--navy-900);
-  padding: 0 0 6px;
+.rchoix label:has(#f-type-prive:checked) { border-color: var(--navy-900); background: var(--paper-alt); color: var(--navy-900); }
+.rchoix label:has(#f-type-prive:checked) .rchoix-coche { display: inline-flex; background: var(--navy-900); }
+.rchoix label:has(#f-type-medical:checked) { border-color: var(--med-green); background: var(--med-green-light); color: var(--med-green); }
+.rchoix label:has(#f-type-medical:checked) .rchoix-coche { display: inline-flex; background: var(--med-green); }
+
+.roptions-medical[hidden] { display: none; }
+
+.rswitch { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 0.88rem; color: var(--ink); font-weight: 500; cursor: pointer; }
+.rswitch input { display: none; }
+.rswitch-track { display: inline-block; width: 38px; height: 22px; border-radius: 20px; background: var(--line); position: relative; flex: none; transition: background 0.2s ease; }
+.rswitch-thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s ease; }
+.rswitch input:checked ~ .rswitch-track { background: var(--med-green); }
+.rswitch input:checked ~ .rswitch-track .rswitch-thumb { transform: translateX(16px); }
+.rswitch-icone { color: var(--med-green); flex: none; }
+.rswitch-bleu input:checked ~ .rswitch-track { background: var(--navy-900); }
+
+.radresses { position: relative; margin-top: 8px; }
+.rbouton-inverser {
+  position: absolute; right: 14px; top: 78px; transform: translateY(-50%);
+  width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 1.5px solid var(--line);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; color: var(--navy-900);
 }
-.radio-row {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-.radio-row label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.92rem;
-  color: var(--ink);
-  font-weight: 500;
-}
-.radio-row input[type="radio"] { accent-color: var(--gold-500); width: 17px; height: 17px; }
-.form-checkboxes {
-  gap: 10px;
-}
-.check-option {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--ink);
-}
-.check-option input[type="checkbox"] {
-  accent-color: var(--gold-500);
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-.facility-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-.facility-chips button {
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--paper-alt);
-  color: var(--navy-800);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-.facility-chips button:hover {
-  border-color: var(--gold-500);
-  color: var(--gold-500);
-  background: #fff;
-}
-.form-consent {
-  gap: 8px;
-}
+#rBlocHeurePc[hidden], #rBlocHeureRdv[hidden] { display: none; }
+
+.rcard-consent { display: flex; flex-direction: column; gap: 8px; padding: 18px 24px; }
 .consent-label {
   display: flex;
   align-items: flex-start;
@@ -810,7 +619,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   font-weight: 400;
   min-width: 0;
 }
-.consent-label input[type="checkbox"] { flex: none; }
 .consent-label span { min-width: 0; flex: 1 1 auto; }
 .consent-label input[type="checkbox"] {
   accent-color: var(--gold-500);
@@ -819,19 +627,36 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   flex: none;
   margin-top: 1px;
 }
-.form-consent > a {
+.rcard-consent > a {
   font-size: 0.82rem;
   color: var(--gold-500);
   font-weight: 600;
   align-self: flex-start;
 }
 
-@media (min-width: 620px) {
-  .reserve-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .form-row-half { grid-column: span 1; }
-  .reserve-form .form-row:not(.form-row-half) { grid-column: 1 / -1; }
-  .reserve-form button, .reserve-form .form-note { grid-column: 1 / -1; }
+.renvoyer {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 16px; font-size: 1rem; font-weight: 800; font-family: var(--font-body);
+  background: var(--gold-500); color: var(--navy-950); border: none; border-radius: 12px;
+  cursor: pointer; box-shadow: var(--shadow-md);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
+.renvoyer:hover { background: var(--gold-400); transform: translateY(-1px); }
+
+.rpied { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; color: var(--ink-soft); margin: 4px 0 0; }
+.rpied a { color: var(--navy-900); font-weight: 600; }
+
+.rform-status {
+  margin-top: 4px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+}
+.rform-status-pending { background: var(--paper-alt); color: var(--navy-800); }
+.rform-status-success { background: var(--med-green-light); color: var(--med-green); }
+.rform-status-error { background: #fdeaea; color: #a3271e; }
 
 /* ===== FAQ ===== */
 .faq-inner { max-width: 780px; }
@@ -1024,7 +849,7 @@ summary:focus-visible {
 /* ===== Responsive ===== */
 @media (max-width: 980px) {
   .services-grid, .why-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .zone-inner, .reserve-inner { grid-template-columns: minmax(0, 1fr); }
+  .zone-inner, .reserve-inner-v2 { grid-template-columns: minmax(0, 1fr); }
   .steps { grid-template-columns: minmax(0, 1fr); gap: 28px; }
 }
 
@@ -1036,15 +861,15 @@ summary:focus-visible {
     top: 100%;
     left: 0;
     right: 0;
-    background: #fff;
-    border-bottom: 1px solid var(--line);
+    background: var(--navy-950);
+    border-bottom: 1px solid rgba(200, 162, 74, 0.2);
     flex-direction: column;
     gap: 0;
     padding: 8px 24px 16px;
     display: none;
   }
   .main-nav.is-open { display: flex; }
-  .main-nav a { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .main-nav a { padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
   .main-nav a:last-child { border-bottom: none; }
   .nav-toggle { display: flex; }
   .btn-call { display: none; }
@@ -1073,8 +898,10 @@ summary:focus-visible {
   .zone-chips { gap: 8px; margin-bottom: 12px; }
   .zone-chips li a { padding: 7px 13px; font-size: 0.85rem; }
 
-  .reserve-inner { gap: 24px; }
-  .reserve-form { padding: 20px 16px; gap: 14px; }
+  .reserve-inner-v2 { gap: 20px; }
+  .reserve-card-form { gap: 12px; }
+  .rcard { padding: 18px 16px 14px; }
+  .rcard-consent { padding: 14px 16px; }
 
   .faq-list { gap: 10px; }
   .faq-item { padding: 4px 16px; }
@@ -1084,4 +911,12 @@ summary:focus-visible {
 
   .footer-inner, .footer-legal { padding-bottom: 18px; }
   .site-footer { padding: 28px 0 16px; }
+}
+
+@media (max-width: 360px) {
+  .logo { gap: 8px; }
+  .logo-icon { width: 38px; height: 26px; }
+  .logo-name { font-size: 0.92rem; }
+  .logo-name .logo-script { font-size: 1.2rem; }
+  .header-inner { padding-top: 16px; padding-bottom: 16px; }
 }

@@ -14,7 +14,9 @@ mentions-legales.html    → mentions légales (éditeur, hébergeur, licence)
 confidentialite.html     → politique de confidentialité
 donnees-personnelles.html→ droits RGPD (accès, rectification, suppression...)
 css/style.css            → style visuel (thème haut de gamme bleu marine / or)
-js/main.js                → menu mobile, animations, carte à la demande, formulaire → WhatsApp
+js/main.js                → menu mobile, animations, carte à la demande, formulaire de réservation
+netlify/functions/reserver.js → fonction serverless (agenda + e-mail de confirmation)
+netlify.toml              → déclare le dossier des fonctions Netlify
 icons/favicon.svg         → icône de l'onglet
 icons/og-image.png        → image de partage (réseaux sociaux / WhatsApp)
 robots.txt / sitemap.xml  → indexation par les moteurs de recherche
@@ -40,9 +42,32 @@ robots.txt / sitemap.xml  → indexation par les moteurs de recherche
 
 ## Réservation en ligne
 
-Le formulaire de la section "Réserver" ne nécessite aucun serveur : au clic
-sur "Envoyer", il ouvre WhatsApp avec un message pré-rempli contenant la
-demande, envoyé directement au numéro de la centrale.
+Le formulaire de la section "Réserver" (calqué sur la page de réservation
+médicale du dépôt `sms-reservation`) envoie la demande à une fonction
+serverless Netlify (`netlify/functions/reserver.js`) qui :
+
+- crée l'événement dans le même Google Agenda que le bot SMS et
+  `reservation_web.py` (même format de titre/description) ;
+- envoie un e-mail de confirmation via Resend (même format que
+  `reservation_web.py`).
+
+Cette fonction n'a aucune dépendance npm (JWT du compte de service Google
+signé à la main avec le module `crypto` de Node, appels HTTP via `fetch`).
+
+**Variables d'environnement à définir dans Netlify** (Site configuration →
+Environment variables) — copier les mêmes valeurs que sur Railway pour
+`sms-reservation` :
+
+```
+GOOGLE_SERVICE_ACCOUNT_JSON   contenu JSON complet de la clé du compte de service Google
+GOOGLE_CALENDAR_ID            adresse/ID du calendrier Google à utiliser
+RESEND_API_KEY                clé API Resend (resend.com)
+EMAIL_DESTINATAIRE            adresse e-mail qui reçoit les confirmations
+```
+
+Tant que ces variables ne sont pas définies, le formulaire répond par un
+message invitant à appeler directement la centrale (aucune erreur serveur,
+dégradation silencieuse).
 
 ## Mise en ligne (Netlify, gratuit)
 
