@@ -229,11 +229,11 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   z-index: 4;
   top: 20px;
   left: 20px;
-  width: 322px;
+  width: 390px;
   min-height: 85px;
   padding: 17px 22px 14px 18px;
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 44px;
+  grid-template-columns: 48px max-content;
   align-items: center;
   column-gap: 8px;
   color: #fff;
@@ -349,10 +349,13 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   font: 700 14px/1.2 "Inter", sans-serif;
 }
 .status-badge-call {
-  position: relative;
-  z-index: 1;
-  width: 42px;
-  height: 42px;
+  position: absolute;
+  right: 72px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  z-index: 3;
   display: grid;
   place-items: center;
   color: #fff;
