@@ -229,13 +229,13 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   z-index: 4;
   top: 20px;
   left: 20px;
-  width: min(70%, 394px);
+  width: 322px;
   min-height: 85px;
-  padding: 17px 44px 14px 18px;
+  padding: 17px 22px 14px 18px;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 41px;
+  grid-template-columns: 48px minmax(0, 1fr) 44px;
   align-items: center;
-  column-gap: 12px;
+  column-gap: 8px;
   color: #fff;
   text-decoration: none;
   overflow: visible;
@@ -268,7 +268,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   position: absolute;
   top: 0;
   left: 0;
-  min-width: 96px;
+  min-width: 120px;
   height: 21px;
   padding: 0 15px;
   display: inline-flex;
@@ -285,15 +285,15 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 .status-badge-left {
   position: relative;
   z-index: 1;
-  width: 43px;
-  height: 43px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
   color: #d7ae55;
 }
 .status-headset {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
 }
 .status-dot-wrap {
   position: absolute;
@@ -338,23 +338,21 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 .status-badge-sub {
   display: block;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .status-badge-title {
   color: #fff;
-  font: 700 clamp(15px, 4vw, 19.5px)/1.12 "Inter", sans-serif;
+  font: 700 18px/1.12 "Inter", sans-serif;
   letter-spacing: -0.025em;
 }
 .status-badge-sub {
   color: #d7ae55;
-  font: 700 clamp(11px, 3.2vw, 14.5px)/1.2 "Inter", sans-serif;
+  font: 700 14px/1.2 "Inter", sans-serif;
 }
 .status-badge-call {
   position: relative;
   z-index: 1;
-  width: 39px;
-  height: 39px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   color: #fff;
@@ -363,8 +361,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   background: rgba(7, 26, 51, 0.9);
 }
 .status-badge-call svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 .status-sparkle {
   position: absolute;
@@ -388,29 +386,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 @media (max-width: 420px) {
   .hero-status-badge {
     top: 16px;
-    width: min(72%, 328px);
     min-height: 85px;
-    padding: 15px 40px 11px 14px;
-    grid-template-columns: 38px minmax(0, 1fr) 36px;
-    column-gap: 9px;
-  }
-  .status-badge-tab {
-    min-width: 86px;
-    height: 20px;
-    padding: 0 12px;
-    font-size: 9px;
-  }
-  .status-badge-left {
-    width: 38px;
-    height: 38px;
-  }
-  .status-headset {
-    width: 29px;
-    height: 29px;
-  }
-  .status-badge-call {
-    width: 36px;
-    height: 36px;
+    padding: 15px 18px 11px 14px;
   }
   .status-sparkle-1 {
     right: 43px;
