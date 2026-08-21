@@ -723,7 +723,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 .review-card .review-stars { display: block; color: var(--gold-500); letter-spacing: 2px; margin-bottom: 10px; }
 .review-card p { margin: 0 0 12px; color: var(--ink); line-height: 1.55; }
 .review-card footer { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
-.reviews-cta { margin-top: 28px; }
+.reviews-cta { display: table; margin: 28px auto 0; }
 @media (max-width: 720px) {
   .reviews-grid { grid-template-columns: minmax(0, 1fr); }
   .review-card { padding: 20px 18px; }
