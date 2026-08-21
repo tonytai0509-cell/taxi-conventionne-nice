@@ -703,7 +703,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 .reviews-stars { color: var(--gold-500); font-size: 1.15rem; letter-spacing: 2px; }
 .reviews-score { font-weight: 800; font-size: 1.05rem; }
@@ -711,22 +711,28 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 .reviews-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
 }
 .review-card {
   margin: 0;
-  padding: 24px 22px;
+  padding: 18px 20px;
   background: var(--paper-alt);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.review-card .review-stars { display: block; color: var(--gold-500); letter-spacing: 2px; margin-bottom: 10px; }
-.review-card p { margin: 0 0 12px; color: var(--ink); line-height: 1.55; }
+.review-card .review-stars { display: block; color: var(--gold-500); letter-spacing: 2px; margin-bottom: 8px; }
+.review-card p { margin: 0 0 10px; color: var(--ink); line-height: 1.5; }
 .review-card footer { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
-.reviews-cta { display: table; margin: 28px auto 0; }
+.reviews-cta {
+  display: table;
+  margin: 24px auto 0;
+  border-color: var(--gold-500);
+  color: var(--gold-500);
+}
+.reviews-cta:hover { background: var(--gold-100); }
 @media (max-width: 720px) {
   .reviews-grid { grid-template-columns: minmax(0, 1fr); }
-  .review-card { padding: 20px 18px; }
+  .review-card { padding: 16px 16px; }
 }
 
 /* ===== Reservation (card-based flow, modelled on the centrale's own
