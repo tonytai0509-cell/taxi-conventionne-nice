@@ -183,22 +183,6 @@
       });
     }
 
-    // "Calcul automatique de l'heure de prise en charge" toggle
-    var caseInconnue = document.getElementById("f-heure-inconnue");
-    var champPC = document.getElementById("f-heure-pc");
-    var champRDV = document.getElementById("f-heure-rdv");
-    function majEtatsChamps() {
-      var inconnue = caseInconnue.checked;
-      champPC.disabled = inconnue;
-      champPC.required = !inconnue;
-      if (inconnue) champPC.value = "";
-      champRDV.required = inconnue;
-    }
-    if (caseInconnue && champPC && champRDV) {
-      caseInconnue.addEventListener("change", majEtatsChamps);
-      majEtatsChamps();
-    }
-
     // Submit -> Netlify function: creates the Google Agenda event and sends
     // the confirmation email (same format as reservation_web.py).
     var boutonEnvoyer = reserveForm.querySelector(".renvoyer");
