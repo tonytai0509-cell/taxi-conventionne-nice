@@ -17,6 +17,25 @@
     });
   }
 
+  // Gold progress bar under the header, filling left-to-right with scroll depth,
+  // with a lit-fuse spark glowing at the advancing tip
+  var headerProgressFill = document.getElementById("headerProgressFill");
+  var headerProgressSpark = document.getElementById("headerProgressSpark");
+  if (headerProgressFill && headerProgressSpark) {
+    var updateHeaderProgress = function () {
+      var scrollTop = window.scrollY || document.documentElement.scrollTop;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var pct = docHeight > 0 ? Math.min(1, Math.max(0, scrollTop / docHeight)) : 0;
+      var pctStr = pct * 100 + "%";
+      headerProgressFill.style.width = pctStr;
+      headerProgressSpark.style.left = pctStr;
+      headerProgressSpark.classList.toggle("is-active", pct > 0.002);
+    };
+    window.addEventListener("scroll", updateHeaderProgress, { passive: true });
+    window.addEventListener("resize", updateHeaderProgress);
+    updateHeaderProgress();
+  }
+
   // Reveal on scroll (progressive enhancement: elements are visible by
   // default in CSS; only hide-then-animate them once we know JS runs).
   var revealEls = document.querySelectorAll(".reveal");
@@ -34,6 +53,48 @@
       { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
     );
     revealEls.forEach(function (el) { io.observe(el); });
+  }
+
+  // Animated counters: count from 0 to the target number once the stat
+  // card scrolls into view
+  var statNumbers = document.querySelectorAll(".stat-number");
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var animateCount = function (el) {
+    var from = parseInt(el.getAttribute("data-count-from"), 10) || 0;
+    var target = parseInt(el.getAttribute("data-count-to"), 10) || 0;
+    var suffix = el.getAttribute("data-suffix") || "";
+    if (reduceMotion) {
+      el.textContent = target + suffix;
+      return;
+    }
+    var duration = 1400;
+    var start = null;
+    var step = function (timestamp) {
+      if (start === null) start = timestamp;
+      var progress = Math.min(1, (timestamp - start) / duration);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(from + eased * (target - from)) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  if (statNumbers.length && "IntersectionObserver" in window) {
+    var statsIo = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            animateCount(entry.target);
+            statsIo.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.4 }
+    );
+    statNumbers.forEach(function (el) { statsIo.observe(el); });
+  } else {
+    statNumbers.forEach(function (el) {
+      el.textContent = (el.getAttribute("data-count-to") || "0") + (el.getAttribute("data-suffix") || "");
+    });
   }
 
   // Footer year
@@ -165,6 +226,7 @@
         date: data.get("date") || "",
         heureRdv: data.get("heureRdv") || "",
         heurePc: data.get("heurePc") || "",
+        siteWeb: data.get("siteWeb") || "",
       };
 
       if (boutonEnvoyer) boutonEnvoyer.disabled = true;

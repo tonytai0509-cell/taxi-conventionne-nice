@@ -23,6 +23,9 @@
 <meta name="twitter:image" content="https://www.taxi-conventionne06.fr/icons/og-image.png" />
 
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="icons/favicon-192.png" sizes="192x192" type="image/png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Dancing+Script:wght@600;700&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
@@ -43,6 +46,7 @@
     { "@type": "City", "name": "Cagnes-sur-Mer" },
     { "@type": "City", "name": "Antibes" },
     { "@type": "City", "name": "Cannes" },
+    { "@type": "City", "name": "Grasse" },
     { "@type": "City", "name": "Menton" },
     { "@type": "City", "name": "Monaco" }
   ],
@@ -139,6 +143,10 @@
       </button>
     </div>
   </div>
+  <div class="header-progress" aria-hidden="true">
+    <div class="header-progress-fill" id="headerProgressFill"></div>
+    <div class="header-progress-spark" id="headerProgressSpark"></div>
+  </div>
 </header>
 
 <main id="contenu">
@@ -188,10 +196,35 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.7 5.1 6.5 6.5l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8Z" fill="currentColor"/></svg>
         APPELER LE 06 24 83 64 48
       </a>
-      <a class="btn-hero-secondary reveal" href="https://wa.me/33624836448?text=Bonjour%2C%20je%20souhaite%20%C3%AAtre%20rappel%C3%A9(e)%20pour%20organiser%20un%20transport." target="_blank" rel="noopener">
+      <a class="btn-hero-secondary reveal" href="https://wa.me/33624125779?text=Bonjour%2C%20je%20souhaite%20%C3%AAtre%20rappel%C3%A9(e)%20pour%20organiser%20un%20transport." target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.7 5.1 6.5 6.5l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8Z" fill="currentColor"/></svg>
         DEMANDER UN RAPPEL
       </a>
+    </div>
+  </section>
+
+  <!-- PARTENAIRES -->
+  <section class="partners-section" aria-label="Nos partenaires">
+    <div class="container">
+      <p class="partners-title reveal">Nos partenaires nous font confiance</p>
+    </div>
+    <div class="partners-marquee" role="list">
+      <div class="partners-track">
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/lenval.png" alt="Fondation Lenval" loading="lazy" width="719" height="240"></span>
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/antoine-lacassagne.png" alt="Centre Antoine Lacassagne" loading="lazy" width="477" height="240"></span>
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/chu-nice.png" alt="CHU de Nice" loading="lazy" width="463" height="240"></span>
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/arnault-tzanck.png" alt="Institut Arnault Tzanck" loading="lazy" width="204" height="240"></span>
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/ameli.png" alt="l'Assurance Maladie – ameli.fr" loading="lazy" width="1160" height="240"></span>
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/clinique-saint-jean.png" alt="Clinique Saint Jean" loading="lazy" width="1073" height="240"></span>
+        <span class="partners-logo" role="listitem"><img src="icons/partenaires/axa.png" alt="AXA" loading="lazy" width="240" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/lenval.png" alt="" loading="lazy" width="719" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/antoine-lacassagne.png" alt="" loading="lazy" width="477" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/chu-nice.png" alt="" loading="lazy" width="463" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/arnault-tzanck.png" alt="" loading="lazy" width="204" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/ameli.png" alt="" loading="lazy" width="1160" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/clinique-saint-jean.png" alt="" loading="lazy" width="1073" height="240"></span>
+        <span class="partners-logo" role="listitem" aria-hidden="true"><img src="icons/partenaires/axa.png" alt="" loading="lazy" width="240" height="240"></span>
+      </div>
     </div>
   </section>
 
@@ -243,19 +276,29 @@
           Notre centrale intervient à Nice et dans les communes voisines, avec la possibilité
           d'étendre chaque course vers l'ensemble des Alpes-Maritimes selon vos besoins.
         </p>
-        <ul class="zone-chips reveal">
-          <li><a href="#reserver">Nice</a></li>
-          <li><a href="#reserver">Saint-Laurent-du-Var</a></li>
-          <li><a href="#reserver">Cagnes-sur-Mer</a></li>
-          <li><a href="#reserver">Antibes</a></li>
-          <li><a href="#reserver">Cannes</a></li>
-          <li><a href="#reserver">Menton</a></li>
-          <li><a href="#reserver">Monaco</a></li>
-          <li><a href="#reserver">Hôpital Pasteur</a></li>
-          <li><a href="#reserver">Hôpital de l'Archet</a></li>
-          <li><a href="#reserver">Centre Antoine-Lacassagne</a></li>
-          <li><a href="#reserver">Clinique Saint-Georges</a></li>
-        </ul>
+        <div class="zone-group reveal">
+          <p class="zone-group-label">Villes desservies</p>
+          <ul class="zone-chips">
+            <li><a href="#reserver">Nice</a></li>
+            <li><a href="taxi-conventionne-saint-laurent-du-var.html">Saint-Laurent-du-Var</a></li>
+            <li><a href="#reserver">Cagnes-sur-Mer</a></li>
+            <li><a href="taxi-conventionne-antibes.html">Antibes</a></li>
+            <li><a href="#reserver">Cannes</a></li>
+            <li><a href="taxi-conventionne-grasse.html">Grasse</a></li>
+            <li><a href="#reserver">Menton</a></li>
+            <li><a href="#reserver">Monaco</a></li>
+          </ul>
+        </div>
+        <div class="zone-group reveal">
+          <p class="zone-group-label">Hôpitaux &amp; cliniques</p>
+          <ul class="zone-chips zone-chips-medical">
+            <li><a href="#reserver">Hôpital Pasteur</a></li>
+            <li><a href="#reserver">Hôpital de l'Archet</a></li>
+            <li><a href="#reserver">Centre Antoine-Lacassagne</a></li>
+            <li><a href="#reserver">Clinique Saint-Georges</a></li>
+            <li><a href="#reserver">Clinique Les Sources</a></li>
+          </ul>
+        </div>
         <p class="zone-footnote reveal">
           Trajet vers l'aéroport Nice Côte d'Azur possible en course privée ou longue distance,
           hors transport médical prescrit.
@@ -352,6 +395,26 @@
           Réservation par téléphone ou WhatsApp
         </li>
       </ul>
+    </div>
+  </section>
+
+  <!-- CHIFFRES CLÉS -->
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card reveal">
+          <span class="stat-number" data-count-to="100" data-suffix="%">0%</span>
+          <span class="stat-label">Conventionné CPAM</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-number" data-count-from="5" data-count-to="437" data-suffix="+">5+</span>
+          <span class="stat-label">Taxis agréés</span>
+        </div>
+        <div class="stat-card reveal">
+          <span class="stat-number" data-count-to="1000" data-suffix="+">0+</span>
+          <span class="stat-label">Courses déjà effectuées</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -488,6 +551,11 @@
           </label>
         </div>
 
+        <div class="rchamp-piege" aria-hidden="true">
+          <label for="f-site-web">Site web</label>
+          <input type="text" id="f-site-web" name="siteWeb" tabindex="-1" autocomplete="off" />
+        </div>
+
         <div class="rcard rcard-consent">
           <label class="consent-label">
             <input type="checkbox" id="f-consent" name="consent" required />
@@ -554,7 +622,7 @@
       <h2 class="reveal">Une question ? Contactez-nous</h2>
       <div class="contact-actions reveal">
         <a class="btn btn-primary btn-lg" href="tel:+33624836448">Appeler le 06 24 83 64 48</a>
-        <a class="btn btn-whatsapp btn-lg" href="https://wa.me/33624836448" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
+        <a class="btn btn-whatsapp btn-lg" href="https://wa.me/33624125779" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
       </div>
     </div>
   </section>
@@ -563,13 +631,19 @@
 
 <footer class="site-footer">
   <div class="container footer-inner">
-    <div>
-      <p class="footer-brand">Centrale de taxis conventionnés CPAM à Nice</p>
-      <p class="footer-sub">Nice · Saint-Laurent-du-Var · Cagnes-sur-Mer et alentours</p>
+    <div class="footer-brand-line">
+      <span class="footer-brand">Centrale de taxis conventionnés CPAM à Nice</span>
+      <span class="footer-sub">Nice • Alpes-Maritimes 06 • Var 83</span>
     </div>
     <div class="footer-contact">
-      <a href="tel:+33624836448">06 24 83 64 48</a>
-      <a href="https://wa.me/33624836448" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="footer-contact-link" href="tel:+33624836448">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.7 5.1 6.5 6.5l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8Z" fill="currentColor"/></svg>
+        06 24 83 64 48
+      </a>
+      <a class="footer-contact-link footer-contact-whatsapp" href="https://wa.me/33624125779" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 8.8c.2-.5.5-.5.8-.5h.6c.2 0 .4 0 .6.4.2.5.6 1.5.7 1.6.1.1.1.3 0 .5-.1.2-.2.3-.4.5-.2.2-.4.3-.2.7.2.4.9 1.4 1.9 2.3 1.3 1.1 2 1.3 2.3 1.4.2.1.4.1.6-.1.2-.2.7-.8.9-1.1.2-.2.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.4 0 .2 0 1-.4 1.5-.4.5-1.4 1-2.2 1-2 0-4.3-1.1-5.9-2.6C8.1 14.1 7 12 7 10.1c0-.9.4-1.3.6-1.5Z" fill="currentColor"/></svg>
+        WhatsApp
+      </a>
     </div>
   </div>
   <div class="container footer-legal">
@@ -580,16 +654,19 @@
       <a href="#contact">Contact</a>
     </nav>
     <p>© <span id="year"></span> Centrale de taxis conventionnés CPAM à Nice. Tous droits réservés.</p>
+    <p class="footer-credit">Site créé par Tony</p>
   </div>
 </footer>
 
-<a class="whatsapp-float" href="https://wa.me/33624836448" target="_blank" rel="noopener" aria-label="Écrire sur WhatsApp">
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.7 5.1 6.5 6.5l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8Z" fill="currentColor"/></svg>
-</a>
-
 <div class="mobile-action-bar" role="navigation" aria-label="Actions rapides">
-  <a class="btn btn-outline" href="tel:+33624836448">Appeler</a>
-  <a class="btn btn-primary" href="#reserver">Réserver</a>
+  <a class="btn btn-outline" href="tel:+33624836448">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.7 5.1 6.5 6.5l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1L6.6 10.8Z" fill="currentColor"/></svg>
+    Appeler
+  </a>
+  <a class="btn btn-primary" href="#reserver">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="2.2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Réserver
+  </a>
 </div>
 
 <script src="js/main.js"></script>

@@ -15,6 +15,16 @@
 
 const crypto = require("crypto");
 
+// Retire les retours a la ligne / caracteres de controle d'un champ texte
+// libre avant de l'inserer dans le titre ou la description de l'evenement
+// (empeche un visiteur malveillant d'injecter de fausses lignes "REF :",
+// "TEL :", etc. via un champ comme le nom ou la destination) et le tronque
+// a une longueur raisonnable.
+function nettoyerTexte(valeur, longueurMax) {
+  if (typeof valeur !== "string") return "";
+  return valeur.replace(/[\r\n\t\x00-\x1f\x7f]+/g, " ").trim().slice(0, longueurMax);
+}
+
 function base64url(input) {
   return Buffer.from(input)
     .toString("base64")
@@ -177,9 +187,21 @@ async function envoyerEmailConfirmation(donnees, reference) {
   }
 }
 
+const CHAMPS_TEXTE_MAX = 120;
+const TELEPHONE_MAX = 30;
+const REGEX_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const REGEX_HEURE = /^\d{2}:\d{2}$/;
+const REGEX_TELEPHONE = /^[0-9+()\s.-]{4,30}$/;
+
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ ok: false, error: "Methode non autorisee" }) };
+  }
+
+  // Corps limite a 20 Ko : un formulaire de reservation legitime tient tres
+  // largement dedans, ca coupe court aux payloads abusifs avant meme le parsing.
+  if (event.body && event.body.length > 20000) {
+    return { statusCode: 413, body: JSON.stringify({ ok: false, error: "Requete trop volumineuse" }) };
   }
 
   let body;
@@ -188,26 +210,63 @@ exports.handler = async function (event) {
   } catch (e) {
     return { statusCode: 400, body: JSON.stringify({ ok: false, error: "JSON invalide" }) };
   }
+  if (!body || typeof body !== "object") {
+    return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Requete invalide" }) };
+  }
 
-  const nom = [body.prenom, body.nom].filter(Boolean).join(" ").trim();
-  const heurePriseEnCharge = body.heurePc || body.heureRdv;
-  if (!nom || !body.telephone || !body.priseEnCharge || !body.destination || !body.date || !heurePriseEnCharge) {
+  // Piege a robots : champ invisible pour un humain, rempli automatiquement
+  // par la plupart des bots de spam. On repond un faux succes pour ne pas
+  // les inciter a s'adapter, sans creer ni evenement ni e-mail.
+  if (typeof body.siteWeb === "string" && body.siteWeb.trim() !== "") {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: true, reference: genererReference(), agenda: { ok: true }, email: { ok: true } }),
+    };
+  }
+
+  const champsTexte = ["prenom", "nom", "telephone", "priseEnCharge", "destination", "date", "heureRdv", "heurePc"];
+  for (const champ of champsTexte) {
+    if (body[champ] !== undefined && typeof body[champ] !== "string") {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: `Champ ${champ} invalide` }) };
+    }
+  }
+
+  const nom = nettoyerTexte([body.prenom, body.nom].filter(Boolean).join(" "), CHAMPS_TEXTE_MAX);
+  const telephone = nettoyerTexte(body.telephone, TELEPHONE_MAX);
+  const priseEnCharge = nettoyerTexte(body.priseEnCharge, CHAMPS_TEXTE_MAX);
+  const destination = nettoyerTexte(body.destination, CHAMPS_TEXTE_MAX);
+  const date = typeof body.date === "string" ? body.date.trim() : "";
+  const heureRdv = typeof body.heureRdv === "string" ? body.heureRdv.trim() : "";
+  const heurePc = typeof body.heurePc === "string" ? body.heurePc.trim() : "";
+  const heurePriseEnCharge = heurePc || heureRdv;
+
+  if (!nom || !telephone || !priseEnCharge || !destination || !date || !heurePriseEnCharge) {
     return {
       statusCode: 400,
       body: JSON.stringify({ ok: false, error: "Champs obligatoires manquants" }),
     };
   }
+  if (!REGEX_TELEPHONE.test(telephone)) {
+    return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Telephone invalide" }) };
+  }
+  if (!REGEX_DATE.test(date)) {
+    return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Date invalide" }) };
+  }
+  if (!REGEX_HEURE.test(heurePriseEnCharge) || (heureRdv && !REGEX_HEURE.test(heureRdv))) {
+    return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Heure invalide" }) };
+  }
 
   const reference = genererReference();
   const donnees = {
     nom,
-    telephone: body.telephone,
+    telephone,
     type: body.typeCourse === "medical" ? "medical" : "prive",
-    priseEnCharge: body.priseEnCharge,
-    destination: body.destination,
-    date: body.date,
-    heureRdv: body.heureRdv || "",
-    heurePc: body.heurePc || "",
+    priseEnCharge,
+    destination,
+    date,
+    heureRdv,
+    heurePc,
     accompagnant: !!body.accompagnant,
     btoRetour: !!body.btoRetour,
   };
