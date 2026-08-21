@@ -221,8 +221,62 @@ const REGEX_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_HEURE = /^\d{2}:\d{2}$/;
 const REGEX_TELEPHONE = /^[0-9+()\s.-]{4,30}$/;
 
+// Limitation de debit par adresse IP : sans elle, un script peut appeler
+// l'endpoint en boucle et noyer l'agenda d'evenements fictifs tout en
+// consommant le quota d'envoi Resend. Le compteur vit dans la memoire de
+// l'isolate Workers : il coupe les rafales venant d'une meme IP, mais ne
+// couvre pas l'ensemble du reseau Cloudflare — d'ou la regle WAF
+// recommandee en complement cote tableau de bord.
+const FENETRE_MS = 60 * 1000;
+const MAX_PAR_FENETRE = 5;
+const compteursIp = new Map();
+
+function limiteDepassee(ip) {
+  if (!ip) return false;
+  const maintenant = Date.now();
+  // Purge des entrees expirees pour que la Map ne grossisse pas sans fin.
+  for (const [cle, horodatages] of compteursIp) {
+    const recents = horodatages.filter((t) => maintenant - t < FENETRE_MS);
+    if (recents.length) compteursIp.set(cle, recents);
+    else compteursIp.delete(cle);
+  }
+  const horodatages = compteursIp.get(ip) || [];
+  if (horodatages.length >= MAX_PAR_FENETRE) return true;
+  horodatages.push(maintenant);
+  compteursIp.set(ip, horodatages);
+  return false;
+}
+
+// REGEX_HEURE accepte "99:99" : on verifie donc aussi les plages reelles,
+// sinon on construirait un dateTime invalide envoye tel quel a Google.
+function heureValide(valeur) {
+  if (!REGEX_HEURE.test(valeur)) return false;
+  const [h, m] = valeur.split(":").map(Number);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
+// Refuse les dates fantaisistes (annee 9999, 30 fevrier, passe lointain) qui
+// pollueraient l'agenda sans jamais correspondre a une course reelle.
+function dateValide(valeur) {
+  if (!REGEX_DATE.test(valeur)) return false;
+  const d = new Date(valeur + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return false;
+  const maintenant = Date.now();
+  const plancher = maintenant - 36 * 60 * 60 * 1000; // tolere la veille (fuseaux)
+  const plafond = maintenant + 550 * 24 * 60 * 60 * 1000; // ~18 mois
+  return d.getTime() >= plancher && d.getTime() <= plafond;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  const ip = request.headers.get("CF-Connecting-IP") || "";
+  if (limiteDepassee(ip)) {
+    return jsonResponse(429, {
+      ok: false,
+      error: "Trop de demandes envoyees. Merci de patienter une minute ou d'appeler la centrale.",
+    });
+  }
 
   const texteBrut = await request.text();
   // Corps limite a 20 Ko : un formulaire de reservation legitime tient tres
@@ -270,10 +324,10 @@ export async function onRequestPost(context) {
   if (!REGEX_TELEPHONE.test(telephone)) {
     return jsonResponse(400, { ok: false, error: "Telephone invalide" });
   }
-  if (!REGEX_DATE.test(date)) {
+  if (!dateValide(date)) {
     return jsonResponse(400, { ok: false, error: "Date invalide" });
   }
-  if (!REGEX_HEURE.test(heurePriseEnCharge) || (heureRdv && !REGEX_HEURE.test(heureRdv))) {
+  if (!heureValide(heurePriseEnCharge) || (heureRdv && !heureValide(heureRdv))) {
     return jsonResponse(400, { ok: false, error: "Heure invalide" });
   }
 

@@ -211,8 +211,15 @@
       statusEl.textContent = message;
     }
 
+    // Verrou d'envoi : desactiver le bouton ne suffit pas (un formulaire peut
+    // aussi etre soumis par la touche Entree), et un double envoi creerait
+    // deux evenements d'agenda pour une seule course.
+    var envoiEnCours = false;
+
     reserveForm.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (envoiEnCours) return;
+      envoiEnCours = true;
       var data = new FormData(reserveForm);
       var payload = {
         prenom: data.get("prenom") || "",
@@ -243,20 +250,39 @@
           });
         })
         .then(function (result) {
-          if (result.status === 200 && result.json.ok) {
-            afficherStatus(
-              "success",
-              "Merci ! Votre demande a bien été reçue (référence " + result.json.reference + "). " +
-              "Nous vous recontactons pour confirmer."
-            );
-            reserveForm.reset();
-            if (radioMedical) { radioMedical.checked = true; majOptionsMedical(); }
-          } else {
+          var json = result.json || {};
+          if (result.status !== 200 || !json.ok) {
             afficherStatus(
               "error",
               "Votre demande n'a pas pu être envoyée automatiquement. Merci d'appeler directement le 06 24 83 64 48."
             );
+            return;
           }
+
+          // Le serveur repond ok:true des que la saisie est valide, meme si
+          // l'agenda et l'e-mail ont echoue ensuite. Sans ce controle, le
+          // client verrait "demande recue" alors que la centrale n'a rien
+          // recu du tout : on ne confirme donc que si au moins un des deux
+          // canaux a reellement abouti.
+          var agendaOk = !!(json.agenda && json.agenda.ok);
+          var emailOk = !!(json.email && json.email.ok);
+
+          if (!agendaOk && !emailOk) {
+            afficherStatus(
+              "error",
+              "Votre demande n'a pas pu être enregistrée. Merci d'appeler directement le " +
+              "06 24 83 64 48 pour confirmer votre course."
+            );
+            return;
+          }
+
+          afficherStatus(
+            "success",
+            "Merci ! Votre demande a bien été reçue (référence " + json.reference + "). " +
+            "Nous vous recontactons pour confirmer."
+          );
+          reserveForm.reset();
+          if (radioMedical) { radioMedical.checked = true; majOptionsMedical(); }
         })
         .catch(function () {
           afficherStatus(
@@ -265,6 +291,7 @@
           );
         })
         .finally(function () {
+          envoiEnCours = false;
           if (boutonEnvoyer) boutonEnvoyer.disabled = false;
         });
     });
