@@ -1,0 +1,10 @@
+{
+  "name": "taxi-conventionne-nice",
+  "compatibility_date": "2025-01-01",
+  "main": "worker.js",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  }
+}
