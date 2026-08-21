@@ -697,6 +697,38 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   .stat-card { padding: 22px 18px; }
 }
 
+/* ===== Avis clients ===== */
+.reviews-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.reviews-stars { color: var(--gold-500); font-size: 1.15rem; letter-spacing: 2px; }
+.reviews-score { font-weight: 800; font-size: 1.05rem; }
+.reviews-count { color: var(--ink-soft); font-size: 0.95rem; }
+.reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.review-card {
+  margin: 0;
+  padding: 24px 22px;
+  background: var(--paper-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.review-card .review-stars { display: block; color: var(--gold-500); letter-spacing: 2px; margin-bottom: 10px; }
+.review-card p { margin: 0 0 12px; color: var(--ink); line-height: 1.55; }
+.review-card footer { font-weight: 700; font-size: 0.9rem; color: var(--ink-soft); }
+.reviews-cta { margin-top: 28px; }
+@media (max-width: 720px) {
+  .reviews-grid { grid-template-columns: minmax(0, 1fr); }
+  .review-card { padding: 20px 18px; }
+}
+
 /* ===== Reservation (card-based flow, modelled on the centrale's own
    daily-use reservation tool) ===== */
 .reserve-inner-v2 {
