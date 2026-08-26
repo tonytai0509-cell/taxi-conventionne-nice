@@ -1,0 +1,4 @@
+GOOGLE_OAUTH_CLIENT_ID=votre-client-id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=votre-client-secret
+SESSION_SECRET=une-longue-valeur-aleatoire
+ENCRYPTION_KEY=une-cle-base64-de-32-octets

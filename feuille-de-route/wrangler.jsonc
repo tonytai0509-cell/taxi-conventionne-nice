@@ -1,0 +1,17 @@
+{
+  "name": "feuille-de-route-taxi",
+  "compatibility_date": "2025-01-01",
+  "main": "worker.js",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "feuille-de-route-taxi",
+      "database_id": "A_REMPLACER_APRES_wrangler_d1_create"
+    }
+  ]
+}
