@@ -1,12 +1,11 @@
 # Feuille de route — application chauffeurs
 
-Application web indépendante (distincte du site vitrine à la racine du
-dépôt) : chaque chauffeur se connecte avec **son propre compte Google**
-(bouton "Se connecter avec Google", aucun mot de passe géré par nous) et
-obtient sa feuille de route du jour, générée directement depuis son Google
-Agenda. Remplace le script Google (Apps Script) précédent par une vraie
-appli hébergée, avec gestion propre des erreurs, des jetons d'accès et de
-plusieurs chauffeurs en même temps.
+Application web : chaque chauffeur se connecte avec **son propre compte
+Google** (bouton "Se connecter avec Google", aucun mot de passe géré par
+nous) et obtient sa feuille de route du jour, générée directement depuis
+son Google Agenda. Remplace le script Google (Apps Script) précédent par
+une vraie appli hébergée, avec gestion propre des erreurs, des jetons
+d'accès et de plusieurs chauffeurs en même temps.
 
 ## Comment ça marche
 
@@ -67,8 +66,6 @@ wrangler.jsonc              → config Cloudflare Worker (assets + D1)
 
 ### 2. Créer la base de données Cloudflare D1
 
-Depuis le dossier `feuille-de-route/` :
-
 ```bash
 npx wrangler d1 create feuille-de-route-taxi
 ```
@@ -114,8 +111,7 @@ route du jour.
 ## Développement local
 
 ```bash
-cd feuille-de-route
-cp .dev.vars.example .dev.vars   # si vous créez ce fichier, sinon voir ci-dessous
+cp .dev.vars.example .dev.vars
 npx wrangler d1 execute feuille-de-route-taxi --local --file=schema.sql
 npx wrangler dev
 ```
