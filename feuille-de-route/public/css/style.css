@@ -115,6 +115,13 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .entete { flex-direction: column; align-items: stretch; }
+  .entete-actions { justify-content: stretch; }
+  .entete-actions > * { flex: 1 1 auto; }
 }
 
 .bouton-secondaire {
