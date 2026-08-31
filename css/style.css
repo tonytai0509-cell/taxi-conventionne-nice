@@ -270,25 +270,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   background: linear-gradient(180deg, transparent 55%, var(--hero-navy) 100%);
   pointer-events: none;
 }
-/* ===== Hero status badge (image banner over the photo) =====
-   Provided as a finished transparent PNG — no CSS-built shape. */
-.lien-bandeau-centrale {
-  position: absolute;
-  z-index: 4;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: block;
-}
-.hero-photo .bandeau-centrale {
-  display: block;
-  width: calc(100% - 32px);
-  max-width: 1100px;
-  height: auto;
-  margin: 16px auto 0;
-  object-fit: contain;
-}
-
 .hero-content {
   background: var(--hero-navy);
   padding: 28px 20px 36px;
