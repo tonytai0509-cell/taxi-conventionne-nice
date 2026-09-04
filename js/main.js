@@ -260,6 +260,14 @@
             return;
           }
 
+          if (typeof gtag === "function") {
+            gtag("event", "conversion", {
+              send_to: "AW-18403307378/lmN8CM-whO4cEPLesMdE",
+              value: 1.0,
+              currency: "EUR",
+            });
+          }
+
           afficherStatus(
             "success",
             "Merci ! Votre demande a bien été reçue (référence " + json.reference + "). " +
