@@ -23,8 +23,8 @@ const ENTETES_SECURITE = {
     "default-src 'self'; script-src 'self' https://www.googletagmanager.com; " +
     "style-src 'self' https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com; " +
-    "img-src 'self' https://www.googletagmanager.com https://www.google.com; " +
-    "connect-src 'self' https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net; " +
+    "img-src 'self' https://www.googletagmanager.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; " +
+    "connect-src 'self' https://www.googletagmanager.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net; " +
     "frame-src https://www.openstreetmap.org; base-uri 'self'; form-action 'self'; " +
     "object-src 'none'; frame-ancestors 'none'",
 };
