@@ -20,8 +20,11 @@ const ENTETES_SECURITE = {
   "Permissions-Policy": "geolocation=(), camera=(), microphone=(), payment=(), usb=()",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com; img-src 'self'; connect-src 'self'; " +
+    "default-src 'self'; script-src 'self' https://www.googletagmanager.com; " +
+    "style-src 'self' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' https://www.googletagmanager.com https://www.google.com; " +
+    "connect-src 'self' https://www.googletagmanager.com https://www.google.com https://googleads.g.doubleclick.net; " +
     "frame-src https://www.openstreetmap.org; base-uri 'self'; form-action 'self'; " +
     "object-src 'none'; frame-ancestors 'none'",
 };
