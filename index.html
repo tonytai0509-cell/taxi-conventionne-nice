@@ -3,6 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Google tag (gtag.js) : suivi des conversions Google Ads (voir
+     "Réservation formulaire site" dans le compte Google Ads) - la balise
+     de base est posee sur chaque page (recommandation Google), l'evenement
+     de conversion lui-meme se declenche dans js/main.js au moment ou la
+     demande de reservation est confirmee recue (pas de page de
+     remerciement dediee, le formulaire reste sur place). L'initialisation
+     est dans js/gtag-init.js (fichier externe, pas de script inline - voir
+     ce fichier) pour rester compatible avec la CSP stricte du site (voir
+     _headers et worker.js pour l'autorisation du domaine googletagmanager.com). -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18403307378"></script>
+<script src="js/gtag-init.js"></script>
 <title>Taxi conventionné Nice – Transport médical CPAM | Centrale Taxi</title>
 <meta name="description" content="Réservez un taxi conventionné CPAM à Nice pour vos consultations, hospitalisations et soins. Transport médical assis 7j/7 au 06 24 83 64 48." />
 <meta name="robots" content="index, follow" />

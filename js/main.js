@@ -267,6 +267,20 @@
           );
           reserveForm.reset();
           if (radioMedical) { radioMedical.checked = true; majOptionsMedical(); }
+
+          // Conversion Google Ads ("Réservation formulaire site") : declenchee
+          // ici plutot que sur une page de remerciement dediee, puisque le
+          // formulaire reste sur place et affiche juste un message de succes
+          // (voir gtag.js pose dans le <head> de chaque page). "typeof gtag"
+          // en garde : un bloqueur de pub qui empeche gtag.js de charger ne
+          // doit jamais faire echouer la confirmation de reservation.
+          if (typeof gtag === "function") {
+            gtag("event", "conversion", {
+              send_to: "AW-18403307378/lmN8CM-whO4cEPLesMdE",
+              value: 1.0,
+              currency: "EUR",
+            });
+          }
         })
         .catch(function () {
           afficherStatus(
