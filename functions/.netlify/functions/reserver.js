@@ -12,6 +12,11 @@
 // configurer dans Cloudflare Pages > Settings > Environment variables) :
 //   GOOGLE_SERVICE_ACCOUNT_JSON, GOOGLE_CALENDAR_ID
 //   RESEND_API_KEY, EMAIL_DESTINATAIRE
+// Optionnelle :
+//   EASYTAXI_LIEN_RESERVATION : lien de reservation du chauffeur dans l'appli
+//   EasyTaxi (https://app.easytaxi-app.fr/r/...). Renseigne, la reservation
+//   arrive directement sur son planning de l'appli (et non plus dans Google
+//   Agenda) ; si l'appli ne repond pas, retour a Google Agenda.
 //
 // Aucune dependance npm : le JWT du compte de service Google est signe a la
 // main avec la Web Crypto API (crypto.subtle, disponible nativement dans le
@@ -346,11 +351,43 @@ export async function onRequestPost(context) {
   };
 
   const [resultatAgenda, resultatEmail] = await Promise.all([
-    creerEvenementAgenda(env, donnees, reference),
+    envoyerVersEasyTaxi(env, body, donnees).then((r) => (r.ok ? r : creerEvenementAgenda(env, donnees, reference))),
     envoyerEmailConfirmation(env, donnees, reference),
   ]);
 
   return jsonResponse(200, { ok: true, reference, agenda: resultatAgenda, email: resultatEmail });
+}
+
+// Reservation posee directement sur le planning de l'appli EasyTaxi (meme
+// route que la page de reservation publique du chauffeur, /r/<jeton>).
+async function envoyerVersEasyTaxi(env, body, donnees) {
+  const lien = (env.EASYTAXI_LIEN_RESERVATION || "").trim();
+  const m = lien.match(/^(https:\/\/[^/]+)\/r\/([A-Za-z0-9_-]+)\/?$/);
+  if (!m) return { ok: false, raison: "non configure" };
+  try {
+    const reponse = await fetch(`${m[1]}/api/public/reservation/${m[2]}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prenom: nettoyerTexte(body.prenom, CHAMPS_TEXTE_MAX),
+        nom: nettoyerTexte(body.nom, CHAMPS_TEXTE_MAX),
+        telephone: donnees.telephone,
+        priseEnCharge: donnees.priseEnCharge,
+        destination: donnees.destination,
+        date: donnees.date,
+        heurePc: donnees.heurePc,
+        heureRdv: donnees.heureRdv,
+        type: donnees.type,
+        accompagnant: donnees.accompagnant,
+        btoRetour: donnees.btoRetour,
+        commentaire: "Réservation du site internet",
+      }),
+    });
+    const r = await reponse.json().catch(() => ({}));
+    return reponse.ok && r.ok ? { ok: true, appli: true } : { ok: false, raison: r.error || `HTTP ${reponse.status}` };
+  } catch (e) {
+    return { ok: false, raison: "appli injoignable" };
+  }
 }
 
 function jsonResponse(statusCode, data) {
