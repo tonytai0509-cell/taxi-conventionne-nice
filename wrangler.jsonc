@@ -2,6 +2,9 @@
   "name": "taxi-conventionne-nice",
   "compatibility_date": "2025-01-01",
   "main": "worker.js",
+  // Garde les variables saisies dans le tableau de bord Cloudflare
+  // (EASYTAXI_LIEN_RESERVATION...) a chaque deploiement depuis GitHub.
+  "keep_vars": true,
   "assets": {
     "directory": "./",
     "binding": "ASSETS",
