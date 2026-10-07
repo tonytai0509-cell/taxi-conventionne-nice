@@ -1161,6 +1161,12 @@ summary:focus-visible {
 /* Page radiotherapie : texte apres la liste des centres */
 .zone-chips + p { margin-top: 20px; }
 
-/* Lien d'une carte vers sa page detaillee (ex. radiotherapie) */
-.card-link { display: inline-block; margin-top: 12px; font-weight: 700; font-size: 0.94rem; color: var(--navy-900); text-decoration: underline; text-decoration-color: var(--gold-500, #C9A24A); text-underline-offset: 3px; }
-.card-link:hover { color: var(--gold-600, #A9822F); }
+/* Encarts de la carte « Hopitaux et soins reguliers » vers les pages radiotherapie, chimiotherapie, dialyse */
+.soins-liens { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.soin-lien { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; background: var(--gold-100); color: var(--navy-900); text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+.soin-lien:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.soin-lien:focus-visible { outline: 2px solid var(--gold-500); outline-offset: 2px; }
+.soin-lien-icone { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--navy-900); color: var(--gold-500); }
+.soin-lien-texte b { display: block; font-size: .95rem; color: var(--navy-900); }
+.soin-lien-texte small { display: block; font-size: .85rem; color: var(--ink-soft); }
+.soin-lien-fleche { margin-left: auto; font-size: 1.3rem; font-weight: 700; color: var(--gold-500); }
