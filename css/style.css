@@ -1160,3 +1160,7 @@ summary:focus-visible {
 
 /* Page radiotherapie : texte apres la liste des centres */
 .zone-chips + p { margin-top: 20px; }
+
+/* Lien d'une carte vers sa page detaillee (ex. radiotherapie) */
+.card-link { display: inline-block; margin-top: 12px; font-weight: 700; font-size: 0.94rem; color: var(--navy-900); text-decoration: underline; text-decoration-color: var(--gold-500, #C9A24A); text-underline-offset: 3px; }
+.card-link:hover { color: var(--gold-600, #A9822F); }
