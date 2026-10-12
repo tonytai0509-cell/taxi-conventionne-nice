@@ -175,6 +175,80 @@ async function creerEvenementAgenda(env, donnees, reference) {
   }
 }
 
+// Gabarit HTML du mail de reservation (styles en ligne, tableaux : lisible dans Gmail).
+const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+function echapper(t) {
+  return String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function dateLongue(iso) {
+  const [a, m, j] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(a, m - 1, j));
+  const jour = JOURS[d.getUTCDay()];
+  return `${jour.charAt(0).toUpperCase() + jour.slice(1)} ${j} ${MOIS[m - 1]} ${a}`;
+}
+
+function dateCourte(iso) {
+  const [a, m, j] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(a, m - 1, j));
+  return `${JOURS[d.getUTCDay()].slice(0, 3).replace(/^./, (c) => c.toUpperCase())}. ${String(j).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
+}
+
+function mailReservationHtml(d, reference) {
+  const heurePc = (d.heurePc || d.heureRdv).replace(":", "h");
+  const heureRdv = d.heureRdv && d.heurePc && d.heureRdv !== d.heurePc ? d.heureRdv.replace(":", "h") : null;
+  const tel = String(d.telephone || "").replace(/[^0-9+]/g, "");
+  const itineraire = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(d.priseEnCharge)}&destination=${encodeURIComponent(d.destination)}`;
+  const ligne = (libelle, valeur) =>
+    `<tr><td style="padding:10px 0;border-bottom:1px solid #EEE7D6;color:#8A7A55;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;width:120px;vertical-align:top">${libelle}</td>` +
+    `<td style="padding:10px 0;border-bottom:1px solid #EEE7D6;color:#0B1F3A;font-size:15px;font-weight:600">${valeur}</td></tr>`;
+  const pastille = (texte, fond, encre) =>
+    `<span style="display:inline-block;margin:0 6px 6px 0;padding:5px 12px;border-radius:999px;background:${fond};color:${encre};font-size:12px;font-weight:800">${texte}</span>`;
+  const options = [
+    d.type === "medical" ? pastille("🏥 Transport médical", "#E6EEF9", "#1D4ED8") : pastille("🚕 Course privée", "#F1F1F1", "#444"),
+    d.accompagnant ? pastille("👥 Accompagnant", "#FFF4DE", "#9A6A00") : "",
+    d.btoRetour ? pastille("📄 Bon de transport au retour", "#FFF4DE", "#9A6A00") : "",
+  ].join("");
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F4F1EA;font-family:Arial,Helvetica,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EA;padding:20px 10px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:18px;overflow:hidden">
+  <tr><td style="background:#0B1F3A;padding:20px 24px">
+    <div style="color:#D7AE55;font-size:12px;font-weight:800;letter-spacing:.14em">CENTRALE TAXI NICE</div>
+    <div style="color:#FFFFFF;font-size:20px;font-weight:800;margin-top:4px">Nouvelle réservation en ligne</div>
+  </td></tr>
+  <tr><td style="padding:22px 24px 6px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBF6EA;border:1px solid #E9D9AE;border-radius:14px"><tr>
+      <td style="padding:16px 18px">
+        <div style="color:#8A7A55;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">📅 Date de la course</div>
+        <div style="color:#0B1F3A;font-size:22px;font-weight:800;margin-top:4px">${echapper(dateLongue(d.date))}</div>
+        <div style="margin-top:10px">
+          <span style="display:inline-block;padding:8px 14px;border-radius:10px;background:#0B1F3A;color:#FFFFFF;font-size:18px;font-weight:800">🕐 Prise en charge ${echapper(heurePc)}</span>
+          ${heureRdv ? `<span style="display:inline-block;margin-left:6px;padding:8px 12px;border-radius:10px;background:#FFFFFF;border:1px solid #E9D9AE;color:#0B1F3A;font-size:14px;font-weight:700">RDV ${echapper(heureRdv)}</span>` : ""}
+        </div>
+      </td></tr></table>
+  </td></tr>
+  <tr><td style="padding:12px 24px 0">${options}</td></tr>
+  <tr><td style="padding:4px 24px 8px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${ligne("Patient", echapper(d.nom))}
+      ${ligne("Téléphone", tel ? `<a href="tel:${echapper(tel)}" style="color:#0B1F3A;text-decoration:none">${echapper(d.telephone)}</a>` : "Non renseigné")}
+      ${ligne("Départ", "📍 " + echapper(d.priseEnCharge))}
+      ${ligne("Destination", "🏁 " + echapper(d.destination))}
+    </table>
+  </td></tr>
+  <tr><td style="padding:10px 24px 22px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      ${tel ? `<td width="50%" style="padding-right:6px"><a href="tel:${echapper(tel)}" style="display:block;text-align:center;padding:13px 0;border-radius:12px;background:#D7AE55;color:#0B1F3A;font-size:15px;font-weight:800;text-decoration:none">📞 Appeler</a></td>` : ""}
+      <td width="50%" style="padding-left:6px"><a href="${echapper(itineraire)}" style="display:block;text-align:center;padding:13px 0;border-radius:12px;background:#0B1F3A;color:#FFFFFF;font-size:15px;font-weight:800;text-decoration:none">🗺️ Itinéraire</a></td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="background:#FBF8F1;padding:14px 24px;color:#8A8A8A;font-size:12px">Réf. <b style="color:#0B1F3A">${echapper(reference)}</b> · reçue via taxi-conventionne06.fr</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 async function envoyerEmailConfirmation(env, donnees, reference) {
   const apiKey = env.RESEND_API_KEY;
   const destinataire = env.EMAIL_DESTINATAIRE;
@@ -186,15 +260,18 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
   const heurePriseEnCharge = donnees.heurePc || donnees.heureRdv;
 
   const corps =
-    `Nouvelle reservation EN LIGNE confirmee (taxi-conventionne06.fr)\n\n` +
-    `Reference : ${reference}\n` +
+    `Nouvelle reservation en ligne (taxi-conventionne06.fr)\n\n` +
+    `Date : ${dateLongue(donnees.date)}\n` +
+    `Prise en charge : ${heurePriseEnCharge.replace(":", "h")}` + (donnees.heureRdv && donnees.heurePc ? ` (RDV ${donnees.heureRdv.replace(":", "h")})` : "") + `\n` +
     `Type : ${typeLabel}\n` +
-    `Nom : ${donnees.nom}\n` +
+    `Patient : ${donnees.nom}\n` +
     `Telephone : ${donnees.telephone || "(non renseigne)"}\n` +
-    `Prise en charge : ${heurePriseEnCharge.replace(":", "h")} - ${donnees.priseEnCharge}\n` +
+    `Depart : ${donnees.priseEnCharge}\n` +
     `Destination : ${donnees.destination}\n` +
     (donnees.accompagnant ? `Accompagnant : oui\n` : "") +
-    (donnees.btoRetour ? `Bon de transport au retour : oui\n` : "");
+    (donnees.btoRetour ? `Bon de transport au retour : oui\n` : "") +
+    `Reference : ${reference}\n`;
+  const sujet = `🚕 ${dateCourte(donnees.date)} · ${heurePriseEnCharge.replace(":", "h")} · ${donnees.nom} → ${donnees.destination}`;
 
   try {
     const reponse = await fetch("https://api.resend.com/emails", {
@@ -206,8 +283,9 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
       body: JSON.stringify({
         from: "Centrale Taxi Nice <onboarding@resend.dev>",
         to: [destinataire],
-        subject: `Reservation en ligne - ${donnees.nom} - Ref ${reference}`,
+        subject: sujet,
         text: corps,
+        html: mailReservationHtml(donnees, reference),
       }),
     });
     if (!reponse.ok) {
