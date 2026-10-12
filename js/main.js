@@ -260,7 +260,31 @@
             .catch(function () {});
         }, 250);
       });
-      champ.addEventListener("blur", function () { setTimeout(fermer, 150); });
+      // Mobile : le champ remonte sous l'en-tete et la barre du bas se cache,
+      // pour que les suggestions restent visibles au-dessus du clavier.
+      function placerChamp() {
+        if (window.innerWidth > 760) return;
+        var entete = document.getElementById("header");
+        var haut = entete ? entete.getBoundingClientRect().height : 0;
+        window.scrollTo({ top: champ.getBoundingClientRect().top + window.pageYOffset - haut - 40, behavior: "smooth" });
+      }
+      function ajusterHauteur() {
+        var vue = window.visualViewport;
+        if (!vue) return;
+        var dispo = vue.height - champ.getBoundingClientRect().bottom - 16;
+        liste.style.maxHeight = Math.max(140, Math.min(320, dispo)) + "px";
+      }
+      champ.addEventListener("focus", function () {
+        document.body.classList.add("saisie-adresse");
+        setTimeout(placerChamp, 250);
+      });
+      if (window.visualViewport) window.visualViewport.addEventListener("resize", function () { if (!liste.hidden) ajusterHauteur(); });
+      var afficherBase = afficher;
+      afficher = function (elements) { afficherBase(elements); if (elements.length) ajusterHauteur(); };
+      champ.addEventListener("blur", function () {
+        document.body.classList.remove("saisie-adresse");
+        setTimeout(fermer, 150);
+      });
       champ.addEventListener("keydown", function (e) { if (e.key === "Escape") fermer(); });
     }
     activerSuggestions(priseEnChargeInput);
