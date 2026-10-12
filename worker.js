@@ -59,9 +59,35 @@ async function ancienneAppli(request, env, url) {
   return new Response(page.body, { status: 410, headers: page.headers });
 }
 
+// Suggestions d'adresses du formulaire (Base Adresse Nationale, IGN : gratuit,
+// sans cle), limitees aux Alpes-Maritimes et au Var. Passe par le Worker pour
+// garder la politique de securite du site (connect-src 'self').
+async function suggestionsAdresses(url) {
+  const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
+  const json = (corps, statut = 200) =>
+    new Response(JSON.stringify(corps), { status: statut, headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" } });
+  if (q.length < 3) return json({ adresses: [] });
+  try {
+    const params = new URLSearchParams({ q, limit: "15", autocomplete: "1" });
+    const r = await fetch(`https://data.geopf.fr/geocodage/search?${params}`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return json({ adresses: [] }, 502);
+    const d = await r.json();
+    const adresses = (d.features || [])
+      .map((f) => f.properties || {})
+      .filter((p) => typeof p.postcode === "string" && ["06", "83"].includes(p.postcode.slice(0, 2)))
+      .slice(0, 6)
+      .map((p) => p.label);
+    return json({ adresses });
+  } catch (e) {
+    return json({ adresses: [] }, 502);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/adresses" && !HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await suggestionsAdresses(url));
 
     if (HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await ancienneAppli(request, env, url));
 

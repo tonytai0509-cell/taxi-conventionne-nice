@@ -183,6 +183,89 @@
       });
     }
 
+    // Suggestions d'adresses pendant la saisie (etablissements connus + BAN).
+    var ETABLISSEMENTS = [
+      ["Hôpital Pasteur 2", "pasteur chu", "30 avenue de la Voie Romaine, 06000 Nice"],
+      ["Hôpital de l'Archet", "archet chu", "151 route Saint-Antoine de Ginestière, 06200 Nice"],
+      ["Hôpital Lenval (pédiatrique)", "lenval chu pediatrique", "57 avenue de la Californie, 06200 Nice"],
+      ["Hôpital Saint-Roch", "saint roch chu", "5 rue Pierre Dévoluy, 06000 Nice"],
+      ["Hôpital de Cimiez", "cimiez chu", "4 avenue Reine Victoria, 06003 Nice"],
+      ["Hôpital Les Sources", "sources", "10 chemin René Pietruschi, 06100 Nice"],
+      ["Centre Antoine Lacassagne", "lacassagne cal", "33 avenue de Valombrose, 06189 Nice"],
+      ["Clinique Saint-George", "saint georges csg", "2 avenue de Rimiez, 06100 Nice"],
+      ["Clinique du Parc Impérial", "parc imperial cpi", "28 boulevard du Tzarewitch, 06000 Nice"],
+      ["Clinique Saint-Antoine", "saint antoine", "7 avenue Durante, 06000 Nice"],
+      ["Clinique Saint-François", "saint francois", "10 boulevard Pasteur, 06000 Nice"],
+      ["Polyclinique Santa Maria", "santa maria", "57 avenue de la Californie, 06200 Nice"],
+      ["Polyclinique Saint-Jean", "saint jean cagnes", "92 avenue du Docteur Maurice Donat, 06800 Cagnes-sur-Mer"],
+      ["Institut Arnault Tzanck", "tzanck", "231 avenue du Docteur Maurice Donat, 06721 Saint-Laurent-du-Var"],
+      ["Aéroport Nice - Terminal 1", "aeroport t1", "Boulevard Maryse Bastié, 06200 Nice"],
+      ["Aéroport Nice - Terminal 2", "aeroport t2", "Boulevard Jacqueline Auriol, 06200 Nice"],
+      ["Gare de Nice-Ville", "gare thiers sncf", "Avenue Thiers, 06000 Nice"],
+    ];
+    function sansAccents(t) {
+      return t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+    function activerSuggestions(champ) {
+      if (!champ) return;
+      champ.setAttribute("autocomplete", "off");
+      var liste = document.createElement("ul");
+      liste.className = "rsuggestions";
+      liste.hidden = true;
+      champ.parentNode.appendChild(liste);
+      var minuterie = null;
+      var numero = 0;
+      function fermer() { liste.hidden = true; liste.innerHTML = ""; }
+      function afficher(elements) {
+        liste.innerHTML = "";
+        elements.forEach(function (el) {
+          var li = document.createElement("li");
+          var titre = document.createElement("strong");
+          titre.textContent = el.titre;
+          li.appendChild(titre);
+          if (el.detail) {
+            var detail = document.createElement("span");
+            detail.textContent = el.detail;
+            li.appendChild(detail);
+          }
+          li.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            champ.value = el.valeur;
+            fermer();
+          });
+          liste.appendChild(li);
+        });
+        liste.hidden = elements.length === 0;
+      }
+      champ.addEventListener("input", function () {
+        var texte = champ.value.trim();
+        clearTimeout(minuterie);
+        if (texte.length < 3) { fermer(); return; }
+        var cle = sansAccents(texte);
+        var connus = ETABLISSEMENTS.filter(function (e) {
+          return sansAccents(e[0] + " " + e[1]).indexOf(cle) !== -1;
+        }).slice(0, 3).map(function (e) {
+          return { titre: e[0], detail: e[2], valeur: e[0] + ", " + e[2] };
+        });
+        afficher(connus);
+        var moi = ++numero;
+        minuterie = setTimeout(function () {
+          fetch("/api/adresses?q=" + encodeURIComponent(texte))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (moi !== numero) return;
+              var adresses = (d.adresses || []).map(function (a) { return { titre: a, valeur: a }; });
+              afficher(connus.concat(adresses).slice(0, 7));
+            })
+            .catch(function () {});
+        }, 250);
+      });
+      champ.addEventListener("blur", function () { setTimeout(fermer, 150); });
+      champ.addEventListener("keydown", function (e) { if (e.key === "Escape") fermer(); });
+    }
+    activerSuggestions(priseEnChargeInput);
+    activerSuggestions(destinationInput);
+
     // "Calcul automatique de l'heure de prise en charge" toggle
     var caseInconnue = document.getElementById("f-heure-inconnue");
     var champPC = document.getElementById("f-heure-pc");
