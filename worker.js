@@ -6,6 +6,7 @@
 // modification du frontend n'est necessaire.
 
 import { onRequestPost } from "./functions/.netlify/functions/reserver.js";
+import { CHEMIN_CONFIRMER_SMS, pageConfirmerSms } from "./functions/confirmerSms.js";
 
 const CHEMIN_RESERVATION = "/.netlify/functions/reserver";
 
@@ -87,6 +88,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname === CHEMIN_CONFIRMER_SMS && !HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await pageConfirmerSms(request, env));
     if (url.pathname === "/api/adresses" && !HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await suggestionsAdresses(url));
 
     if (HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await ancienneAppli(request, env, url));

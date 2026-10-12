@@ -1180,3 +1180,8 @@ summary:focus-visible {
 .soin-lien-texte b { display: block; font-size: .95rem; color: var(--navy-900); }
 .soin-lien-texte small { display: block; font-size: .85rem; color: var(--ink-soft); }
 .soin-lien-fleche { margin-left: auto; font-size: 1.3rem; font-weight: 700; color: var(--gold-500); }
+
+/* Page « Confirmer au client par SMS » (lien du mail de reservation). */
+.confirmer-sms .container { max-width: 560px; }
+.confirmer-sms-message { background: var(--paper-alt); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--ink); }
+.confirmer-sms-bouton { width: 100%; justify-content: center; background: #1e8e3e; color: #fff; border: none; font-size: 1.05rem; padding: 16px; border-radius: 12px; cursor: pointer; }

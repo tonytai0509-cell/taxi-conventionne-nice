@@ -27,6 +27,8 @@
 // (empeche un visiteur malveillant d'injecter de fausses lignes "REF :",
 // "TEL :", etc. via un champ comme le nom ou la destination) et le tronque
 // a une longueur raisonnable.
+import { relaisConfigure, lienConfirmationSms } from "../../confirmerSms.js";
+
 function nettoyerTexte(valeur, longueurMax) {
   if (typeof valeur !== "string") return "";
   return valeur.replace(/[\r\n\t\x00-\x1f\x7f]+/g, " ").trim().slice(0, longueurMax);
@@ -196,7 +198,7 @@ function dateCourte(iso) {
   return `${JOURS[d.getUTCDay()].slice(0, 3).replace(/^./, (c) => c.toUpperCase())}. ${String(j).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
 }
 
-function mailReservationHtml(d, reference) {
+function mailReservationHtml(d, reference, lienRelais = null) {
   const heurePc = (d.heurePc || d.heureRdv).replace(":", "h");
   const heureRdv = d.heureRdv && d.heurePc && d.heureRdv !== d.heurePc ? d.heureRdv.replace(":", "h") : null;
   const tel = String(d.telephone || "").replace(/[^0-9+]/g, "");
@@ -204,7 +206,7 @@ function mailReservationHtml(d, reference) {
   const nomFamille = String(d.nom || "").trim().split(/\s+/).slice(1).join(" ");
   const [, moisSms, jourSms] = d.date.split("-");
   const texteSms = `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jourSms}/${moisSms} à ${heurePc} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
-  const lienSms = tel ? `sms:${tel}?body=${encodeURIComponent(texteSms)}` : null;
+  const lienSms = lienRelais || (tel ? `sms:${tel}?body=${encodeURIComponent(texteSms)}` : null);
   const itineraire = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(d.priseEnCharge)}&destination=${encodeURIComponent(d.destination)}`;
   const ligne = (libelle, valeur) =>
     `<tr><td style="padding:10px 0;border-bottom:1px solid #EEE7D6;color:#8A7A55;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;width:120px;vertical-align:top">${libelle}</td>` +
@@ -251,9 +253,19 @@ function mailReservationHtml(d, reference) {
     </tr></table>
   </td></tr>
   ${lienSms ? `<tr><td style="padding:0 24px 22px"><a href="${echapper(lienSms)}" style="display:block;text-align:center;padding:15px 0;border-radius:12px;background:#1E8E3E;color:#FFFFFF;font-size:16px;font-weight:800;text-decoration:none">✅ Confirmer au client par SMS</a>
-    <div style="margin-top:8px;color:#8A8A8A;font-size:12px;text-align:center">Ouvre vos SMS avec le message prêt : « ${echapper(texteSms.split("\n")[0])} »</div></td></tr>` : ""}
+    <div style="margin-top:8px;color:#8A8A8A;font-size:12px;text-align:center">${lienRelais ? "Envoyé par le téléphone relais après validation" : "Ouvre vos SMS avec le message prêt"} : « ${echapper(texteSms.split("\n")[0])} »</div></td></tr>` : ""}
   <tr><td style="background:#FBF8F1;padding:14px 24px;color:#8A8A8A;font-size:12px">Réf. <b style="color:#0B1F3A">${echapper(reference)}</b> · reçue via taxi-conventionne06.fr</td></tr>
 </table></td></tr></table></body></html>`;
+}
+
+// Lien « Confirmer au client par SMS » via le telephone relais (si configure).
+async function lienRelaisSms(env, d) {
+  if (!relaisConfigure(env) || !d.telephone) return null;
+  const nomFamille = String(d.nom || "").trim().split(/\s+/).slice(1).join(" ");
+  const [, mois, jour] = d.date.split("-");
+  const heure = (d.heurePc || d.heureRdv).replace(":", "h");
+  const texte = `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jour}/${mois} à ${heure} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
+  return lienConfirmationSms(env, "https://taxi-conventionne06.fr", d.telephone, texte);
 }
 
 async function envoyerEmailConfirmation(env, donnees, reference) {
@@ -292,7 +304,7 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
         to: [destinataire],
         subject: sujet,
         text: corps,
-        html: mailReservationHtml(donnees, reference),
+        html: mailReservationHtml(donnees, reference, await lienRelaisSms(env, donnees)),
       }),
     });
     if (!reponse.ok) {
