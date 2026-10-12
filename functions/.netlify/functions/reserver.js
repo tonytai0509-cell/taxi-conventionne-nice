@@ -141,7 +141,10 @@ async function creerEvenementAgenda(env, donnees, reference) {
     `TEL : ${telephone}\n` +
     `SOURCE : RESERVATION EN LIGNE (CLIENT) - TAXI-CONVENTIONNE06.FR` +
     (donnees.accompagnant ? "\nACCOMPAGNANT : OUI" : "") +
-    (donnees.btoRetour ? "\nBT : AU RETOUR UNIQUEMENT" : "")
+    (donnees.btoRetour ? "\nBT : AU RETOUR UNIQUEMENT" : "") +
+    (donnees.telephone2 ? `\nTEL 2 : ${donnees.telephone2}` : "") +
+    (donnees.reservePar ? `\nRESERVE PAR : ${donnees.reservePar}${donnees.telReservant ? " - " + donnees.telReservant : ""}` : "") +
+    (donnees.commentaire ? `\nCOMMENTAIRE : ${donnees.commentaire}` : "")
   ).toUpperCase();
 
   const [h, m] = heurePriseEnCharge.split(":").map(Number);
@@ -244,6 +247,9 @@ function mailReservationHtml(d, reference, lienRelais = null) {
       ${ligne("Téléphone", tel ? `<a href="tel:${echapper(tel)}" style="color:#0B1F3A;text-decoration:none">${echapper(d.telephone)}</a>` : "Non renseigné")}
       ${ligne("Départ", "📍 " + echapper(d.priseEnCharge))}
       ${ligne("Destination", "🏁 " + echapper(d.destination))}
+      ${d.telephone2 ? ligne("Autre numéro", `<a href="tel:${echapper(String(d.telephone2).replace(/[^0-9+]/g, ""))}" style="color:#0B1F3A;text-decoration:none">${echapper(d.telephone2)}</a>`) : ""}
+      ${d.reservePar ? ligne("Réservé par", echapper(d.reservePar) + (d.telReservant ? ` · <a href="tel:${echapper(String(d.telReservant).replace(/[^0-9+]/g, ""))}" style="color:#0B1F3A;text-decoration:none">${echapper(d.telReservant)}</a>` : "")) : ""}
+      ${d.commentaire ? ligne("Commentaire", echapper(d.commentaire)) : ""}
     </table>
   </td></tr>
   <tr><td style="padding:10px 24px 22px">
@@ -289,6 +295,9 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
     `Destination : ${donnees.destination}\n` +
     (donnees.accompagnant ? `Accompagnant : oui\n` : "") +
     (donnees.btoRetour ? `Bon de transport au retour : oui\n` : "") +
+    (donnees.telephone2 ? `Autre numero : ${donnees.telephone2}\n` : "") +
+    (donnees.reservePar ? `Reserve par : ${donnees.reservePar}${donnees.telReservant ? " - " + donnees.telReservant : ""}\n` : "") +
+    (donnees.commentaire ? `Commentaire : ${donnees.commentaire}\n` : "") +
     `Reference : ${reference}\n`;
   const sujet = `🚕 ${dateCourte(donnees.date)} · ${heurePriseEnCharge.replace(":", "h")} · ${donnees.nom} → ${donnees.destination}`;
 
@@ -404,7 +413,7 @@ export async function onRequestPost(context) {
     return jsonResponse(200, { ok: true, reference: genererReference(), agenda: { ok: true }, email: { ok: true } });
   }
 
-  const champsTexte = ["prenom", "nom", "telephone", "priseEnCharge", "destination", "date", "heureRdv", "heurePc"];
+  const champsTexte = ["prenom", "nom", "telephone", "priseEnCharge", "destination", "date", "heureRdv", "heurePc", "reservePar", "telReservant", "telephone2", "commentaire"];
   for (const champ of champsTexte) {
     if (body[champ] !== undefined && typeof body[champ] !== "string") {
       return jsonResponse(400, { ok: false, error: `Champ ${champ} invalide` });
@@ -445,6 +454,10 @@ export async function onRequestPost(context) {
     heurePc,
     accompagnant: !!body.accompagnant,
     btoRetour: !!body.btoRetour,
+    reservePar: nettoyerTexte(body.reservePar, CHAMPS_TEXTE_MAX),
+    telReservant: nettoyerTexte(body.telReservant, TELEPHONE_MAX),
+    telephone2: nettoyerTexte(body.telephone2, TELEPHONE_MAX),
+    commentaire: nettoyerTexte(body.commentaire, 500),
   };
 
   const [resultatAgenda, resultatEmail] = await Promise.all([

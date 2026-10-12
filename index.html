@@ -483,8 +483,40 @@
 
         <div class="rcard">
           <div class="rcard-title">
+            <span class="rcard-num">?</span>
+            <h3>Qui réserve ?</h3>
+          </div>
+          <div class="rqui">
+            <label class="rqui-option" for="f-qui-patient">
+              <input type="radio" id="f-qui-patient" name="qui" value="patient" checked />
+              <span class="rqui-rond"></span>
+              <span class="rqui-texte">Je réserve pour moi ou un proche</span>
+            </label>
+            <label class="rqui-option" for="f-qui-pro">
+              <input type="radio" id="f-qui-pro" name="qui" value="pro" />
+              <span class="rqui-rond"></span>
+              <span class="rqui-texte">Je suis un professionnel de santé<small>Infirmier·e, secrétariat médical, clinique…</small></span>
+            </label>
+          </div>
+          <div class="rpro" id="rBlocPro" hidden>
+            <label for="f-reserve-par">Votre nom et structure</label>
+            <div class="rfield">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+              <input id="f-reserve-par" name="reservePar" type="text" maxlength="120" placeholder="Ex : Marie (cabinet infirmier)" />
+            </div>
+            <label for="f-tel-reservant">Votre téléphone (pour vous rappeler)</label>
+            <div class="rfield">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.81.3 1.6.54 2.37a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.71-1.11a2 2 0 0 1 2.11-.45c.77.24 1.56.42 2.37.54A2 2 0 0 1 22 16.92z"/></svg>
+              <input id="f-tel-reservant" name="telReservant" type="tel" maxlength="30" placeholder="06 12 34 56 78" />
+            </div>
+            <p class="rpro-note">Le chauffeur verra votre nom et pourra vous appeler.</p>
+          </div>
+        </div>
+
+        <div class="rcard">
+          <div class="rcard-title">
             <span class="rcard-num">1</span>
-            <h3>Vos coordonnées</h3>
+            <h3 id="rTitreCoordonnees">Vos coordonnées</h3>
           </div>
           <div class="rline">
             <div>
@@ -502,7 +534,7 @@
               </div>
             </div>
           </div>
-          <label for="f-telephone">Téléphone</label>
+          <label for="f-telephone" id="rLabelTelephone">Téléphone</label>
           <div class="rfield">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.81.3 1.6.54 2.37a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.71-1.11a2 2 0 0 1 2.11-.45c.77.24 1.56.42 2.37.54A2 2 0 0 1 22 16.92z"/></svg>
             <input id="f-telephone" name="telephone" type="tel" placeholder="06 12 34 56 78" required autocomplete="tel" />
@@ -564,6 +596,14 @@
               <input id="f-destination" name="destination" type="text" placeholder="Ex : Aéroport de Nice" required />
             </div>
           </div>
+
+          <label for="f-telephone2">Autre numéro à joindre (optionnel)</label>
+          <div class="rfield">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.81.3 1.6.54 2.37a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.71-1.11a2 2 0 0 1 2.11-.45c.77.24 1.56.42 2.37.54A2 2 0 0 1 22 16.92z"/></svg>
+            <input id="f-telephone2" name="telephone2" type="tel" maxlength="30" placeholder="Ex : un proche, l'accueil du service" />
+          </div>
+          <label for="f-commentaire">Commentaire (optionnel)</label>
+          <textarea id="f-commentaire" name="commentaire" class="rtextarea" rows="3" maxlength="500" placeholder="Ex : attendre en salle d'attente, code portail 1234…"></textarea>
         </div>
 
         <div class="rcard">

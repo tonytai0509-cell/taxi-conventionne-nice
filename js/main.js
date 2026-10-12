@@ -172,6 +172,24 @@
       majOptionsMedical();
     }
 
+    // « Qui reserve ? » : un professionnel de sante reserve pour un patient.
+    var quiPro = document.getElementById("f-qui-pro");
+    var quiPatient = document.getElementById("f-qui-patient");
+    var blocPro = document.getElementById("rBlocPro");
+    function majQui() {
+      var pro = quiPro.checked;
+      blocPro.hidden = !pro;
+      document.getElementById("f-reserve-par").required = pro;
+      document.getElementById("f-tel-reservant").required = pro;
+      document.getElementById("rTitreCoordonnees").textContent = pro ? "Patient" : "Vos coordonnées";
+      document.getElementById("rLabelTelephone").textContent = pro ? "Téléphone du patient" : "Téléphone";
+    }
+    if (quiPro && quiPatient && blocPro) {
+      quiPro.addEventListener("change", majQui);
+      quiPatient.addEventListener("change", majQui);
+      majQui();
+    }
+
     // Swap "prise en charge" / "destination" addresses
     var boutonInverser = document.getElementById("rBoutonInverser");
     var priseEnChargeInput = document.getElementById("f-prise-en-charge");
@@ -341,6 +359,10 @@
         heureRdv: data.get("heureRdv") || "",
         heurePc: data.get("heurePc") || "",
         siteWeb: data.get("siteWeb") || "",
+        reservePar: data.get("qui") === "pro" ? data.get("reservePar") || "" : "",
+        telReservant: data.get("qui") === "pro" ? data.get("telReservant") || "" : "",
+        telephone2: data.get("telephone2") || "",
+        commentaire: data.get("commentaire") || "",
       };
 
       if (boutonEnvoyer) boutonEnvoyer.disabled = true;
