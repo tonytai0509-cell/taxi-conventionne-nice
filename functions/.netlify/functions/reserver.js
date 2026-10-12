@@ -367,6 +367,8 @@ async function envoyerVersEasyTaxi(env, body, donnees) {
   try {
     const reponse = await fetch(`${m[1]}/api/public/reservation/${m[2]}`, {
       method: "POST",
+      // Appli arretee ou injoignable : on ne fait pas attendre le patient.
+      signal: AbortSignal.timeout(8000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prenom: nettoyerTexte(body.prenom, CHAMPS_TEXTE_MAX),
