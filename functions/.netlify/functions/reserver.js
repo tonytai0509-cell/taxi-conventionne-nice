@@ -200,6 +200,11 @@ function mailReservationHtml(d, reference) {
   const heurePc = (d.heurePc || d.heureRdv).replace(":", "h");
   const heureRdv = d.heureRdv && d.heurePc && d.heureRdv !== d.heurePc ? d.heureRdv.replace(":", "h") : null;
   const tel = String(d.telephone || "").replace(/[^0-9+]/g, "");
+  // Meme SMS que le bouton « Confirmer par SMS » de l'appli (EcranReserver.kt).
+  const nomFamille = String(d.nom || "").trim().split(/\s+/).slice(1).join(" ");
+  const [, moisSms, jourSms] = d.date.split("-");
+  const texteSms = `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jourSms}/${moisSms} à ${heurePc} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
+  const lienSms = tel ? `sms:${tel}?body=${encodeURIComponent(texteSms)}` : null;
   const itineraire = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(d.priseEnCharge)}&destination=${encodeURIComponent(d.destination)}`;
   const ligne = (libelle, valeur) =>
     `<tr><td style="padding:10px 0;border-bottom:1px solid #EEE7D6;color:#8A7A55;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;width:120px;vertical-align:top">${libelle}</td>` +
@@ -245,6 +250,8 @@ function mailReservationHtml(d, reference) {
       <td width="50%" style="padding-left:6px"><a href="${echapper(itineraire)}" style="display:block;text-align:center;padding:13px 0;border-radius:12px;background:#0B1F3A;color:#FFFFFF;font-size:15px;font-weight:800;text-decoration:none">🗺️ Itinéraire</a></td>
     </tr></table>
   </td></tr>
+  ${lienSms ? `<tr><td style="padding:0 24px 22px"><a href="${echapper(lienSms)}" style="display:block;text-align:center;padding:15px 0;border-radius:12px;background:#1E8E3E;color:#FFFFFF;font-size:16px;font-weight:800;text-decoration:none">✅ Confirmer au client par SMS</a>
+    <div style="margin-top:8px;color:#8A8A8A;font-size:12px;text-align:center">Ouvre vos SMS avec le message prêt : « ${echapper(texteSms.split("\n")[0])} »</div></td></tr>` : ""}
   <tr><td style="background:#FBF8F1;padding:14px 24px;color:#8A8A8A;font-size:12px">Réf. <b style="color:#0B1F3A">${echapper(reference)}</b> · reçue via taxi-conventionne06.fr</td></tr>
 </table></td></tr></table></body></html>`;
 }
