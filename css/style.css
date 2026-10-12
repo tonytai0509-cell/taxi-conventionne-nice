@@ -806,7 +806,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 .rswitch-icone { color: var(--med-green); flex: none; }
 .rswitch-bleu input:checked ~ .rswitch-track { background: var(--navy-900); }
 
-.radresses { position: relative; margin-top: 8px; }
+.radresses { position: relative; margin-top: 16px; }
 .rbouton-inverser {
   position: absolute; right: 14px; top: 78px; transform: translateY(-50%);
   width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 1.5px solid var(--line);
@@ -1205,3 +1205,7 @@ body.saisie-adresse .mobile-action-bar { display: none !important; }
   border-radius: 10px; border: 1.5px solid var(--line); background: var(--paper-alt); color: var(--ink);
 }
 .rtextarea:focus { outline: none; border-color: var(--gold-500); background: #fff; }
+/* Espacement identique entre tous les champs du formulaire. */
+.rcard label:not(.rswitch):not(.rqui-option):not(.rchoix label):not(.consent-label) { margin: 16px 0 6px; }
+.rcard .rcard-title + label, .rcard .rcard-title + .rline label, .radresses > label:first-child { margin-top: 0; }
+.rpro > label:first-child { margin-top: 12px; }
