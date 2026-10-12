@@ -41,12 +41,12 @@ function avecEntetesSecurite(reponse) {
 
 // Ancienne adresse de l'appli EasyTaxi (service arrete) : une fois le domaine
 // app.easytaxi-app.fr rattache a ce Worker, le lien de reservation de la
-// centrale (EASYTAXI_LIEN_RESERVATION) renvoie vers le formulaire du site ;
+// centrale (EASYTAXI_ANCIEN_LIEN, ou EASYTAXI_LIEN_RESERVATION) renvoie vers le formulaire du site ;
 // tout le reste (liens des autres chauffeurs...) affiche une page explicative.
 const HOTES_EASYTAXI = ["app.easytaxi-app.fr", "easytaxi-app.fr", "www.easytaxi-app.fr"];
 
 async function ancienneAppli(request, env, url) {
-  const lien = (env.EASYTAXI_LIEN_RESERVATION || "").trim().match(/\/r\/([A-Za-z0-9_-]+)\/?$/);
+  const lien = (env.EASYTAXI_ANCIEN_LIEN || env.EASYTAXI_LIEN_RESERVATION || "").trim().match(/\/r\/([A-Za-z0-9_-]+)\/?$/);
   const m = url.pathname.match(/^\/r\/([A-Za-z0-9_-]+)\/?$/);
   if (m && lien && m[1] === lien[1]) return Response.redirect("https://taxi-conventionne06.fr/#reserver", 302);
   if (url.pathname.startsWith("/api/")) {
