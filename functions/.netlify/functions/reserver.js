@@ -124,6 +124,7 @@ async function creerEvenementAgenda(env, donnees, reference) {
   const heureRdvAff = donnees.heureRdv || heurePriseEnCharge;
 
   const titre = (
+    (donnees.pcADefinir ? "PC A DEFINIR (RDV " + heureRdvAff + ") " : "") +
     `PC ${heureAff} M. ${donnees.nom} | ` +
     `PC : ${donnees.priseEnCharge} | ` +
     `DEST : ${donnees.destination} | ` +
@@ -140,6 +141,8 @@ async function creerEvenementAgenda(env, donnees, reference) {
     `RDV : ${heureRdvAff} ${typeTag}\n` +
     `TEL : ${telephone}\n` +
     `SOURCE : RESERVATION EN LIGNE (CLIENT) - TAXI-CONVENTIONNE06.FR` +
+    (donnees.pcCalculee ? `\nHEURE DE PC CALCULEE AUTOMATIQUEMENT (TRAJET ~${donnees.dureeTrajet} MIN + MARGE)` : "") +
+    (donnees.pcADefinir ? "\nHEURE DE PC A DEFINIR : LE CLIENT A DEMANDE LE CALCUL, TRAJET NON TROUVE" : "") +
     (donnees.accompagnant ? "\nACCOMPAGNANT : OUI" : "") +
     (donnees.btoRetour ? "\nBT : AU RETOUR UNIQUEMENT" : "") +
     (donnees.telephone2 ? `\nTEL 2 : ${donnees.telephone2}` : "") +
@@ -202,14 +205,21 @@ function dateCourte(iso) {
 }
 
 function mailReservationHtml(d, reference, lienRelais = null) {
-  const heurePc = (d.heurePc || d.heureRdv).replace(":", "h");
+  const heurePc = d.pcADefinir ? "à définir" : (d.heurePc || d.heureRdv).replace(":", "h");
   const heureRdv = d.heureRdv && d.heurePc && d.heureRdv !== d.heurePc ? d.heureRdv.replace(":", "h") : null;
+  const noteCalcul = d.pcCalculee
+    ? `Heure calculée automatiquement : trajet d'environ ${d.dureeTrajet} min + marge de sécurité. Vérifiez-la avant de confirmer.`
+    : d.pcADefinir
+      ? "Le client a demandé le calcul automatique mais le trajet n'a pas été trouvé : choisissez l'heure de prise en charge (course placée 1 h avant le RDV dans l'agenda)."
+      : "";
   const tel = String(d.telephone || "").replace(/[^0-9+]/g, "");
   // Meme SMS que le bouton « Confirmer par SMS » de l'appli (EcranReserver.kt).
   const nomFamille = String(d.nom || "").trim().split(/\s+/).slice(1).join(" ");
   const [, moisSms, jourSms] = d.date.split("-");
-  const texteSms = `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jourSms}/${moisSms} à ${heurePc} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
-  const lienSms = lienRelais || (tel ? `sms:${tel}?body=${encodeURIComponent(texteSms)}` : null);
+  const texteSms = d.pcCalculee || d.pcADefinir
+    ? `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jourSms}/${moisSms} est bien confirmée : prise en charge à ${d.pcADefinir ? "XXhXX" : heurePc} pour votre rendez-vous de ${String(d.heureRdv).replace(":", "h")}. À bientôt !\n\nCentrale Taxi Nice`
+    : `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jourSms}/${moisSms} à ${heurePc} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
+  const lienSms = d.pcADefinir ? null : lienRelais || (tel ? `sms:${tel}?body=${encodeURIComponent(texteSms)}` : null);
   const itineraire = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(d.priseEnCharge)}&destination=${encodeURIComponent(d.destination)}`;
   const ligne = (libelle, valeur) =>
     `<tr><td style="padding:10px 0;border-bottom:1px solid #EEE7D6;color:#8A7A55;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;width:120px;vertical-align:top">${libelle}</td>` +
@@ -237,6 +247,7 @@ function mailReservationHtml(d, reference, lienRelais = null) {
         <div style="margin-top:10px">
           <span style="display:inline-block;padding:8px 14px;border-radius:10px;background:#0B1F3A;color:#FFFFFF;font-size:18px;font-weight:800">🕐 Prise en charge ${echapper(heurePc)}</span>
           ${heureRdv ? `<span style="display:inline-block;margin-left:6px;padding:8px 12px;border-radius:10px;background:#FFFFFF;border:1px solid #E9D9AE;color:#0B1F3A;font-size:14px;font-weight:700">RDV ${echapper(heureRdv)}</span>` : ""}
+          ${noteCalcul ? `<div style="margin-top:10px;padding:8px 12px;border-radius:10px;background:${d.pcADefinir ? "#FDECEA" : "#FFF4DE"};color:${d.pcADefinir ? "#A3271E" : "#9A6A00"};font-size:13px;font-weight:700">⚙️ ${echapper(noteCalcul)}</div>` : ""}
         </div>
       </td></tr></table>
   </td></tr>
@@ -270,7 +281,10 @@ async function lienRelaisSms(env, d) {
   const nomFamille = String(d.nom || "").trim().split(/\s+/).slice(1).join(" ");
   const [, mois, jour] = d.date.split("-");
   const heure = (d.heurePc || d.heureRdv).replace(":", "h");
-  const texte = `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jour}/${mois} à ${heure} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
+  if (d.pcADefinir) return null;
+  const texte = d.pcCalculee
+    ? `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jour}/${mois} est bien confirmée : prise en charge à ${heure} pour votre rendez-vous de ${String(d.heureRdv).replace(":", "h")}. À bientôt !\n\nCentrale Taxi Nice`
+    : `Bonjour${nomFamille ? " M. " + nomFamille : ""}, votre réservation du ${jour}/${mois} à ${heure} est bien confirmée, à bientôt !\n\nCentrale Taxi Nice`;
   return lienConfirmationSms(env, "https://taxi-conventionne06.fr", d.telephone, texte);
 }
 
@@ -287,7 +301,7 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
   const corps =
     `Nouvelle reservation en ligne (taxi-conventionne06.fr)\n\n` +
     `Date : ${dateLongue(donnees.date)}\n` +
-    `Prise en charge : ${heurePriseEnCharge.replace(":", "h")}` + (donnees.heureRdv && donnees.heurePc ? ` (RDV ${donnees.heureRdv.replace(":", "h")})` : "") + `\n` +
+    `Prise en charge : ${donnees.pcADefinir ? "A DEFINIR" : heurePriseEnCharge.replace(":", "h")}` + (donnees.heureRdv && donnees.heurePc ? ` (RDV ${donnees.heureRdv.replace(":", "h")})` : "") + (donnees.pcCalculee ? " - calculee automatiquement" : "") + `\n` +
     `Type : ${typeLabel}\n` +
     `Patient : ${donnees.nom}\n` +
     `Telephone : ${donnees.telephone || "(non renseigne)"}\n` +
@@ -299,7 +313,7 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
     (donnees.reservePar ? `Reserve par : ${donnees.reservePar}${donnees.telReservant ? " - " + donnees.telReservant : ""}\n` : "") +
     (donnees.commentaire ? `Commentaire : ${donnees.commentaire}\n` : "") +
     `Reference : ${reference}\n`;
-  const sujet = `🚕 ${dateCourte(donnees.date)} · ${heurePriseEnCharge.replace(":", "h")} · ${donnees.nom} → ${donnees.destination}`;
+  const sujet = `🚕 ${dateCourte(donnees.date)} · ${donnees.pcADefinir ? "PC à définir (RDV " + donnees.heureRdv.replace(":", "h") + ")" : heurePriseEnCharge.replace(":", "h")} · ${donnees.nom} → ${donnees.destination}`;
 
   try {
     const reponse = await fetch("https://api.resend.com/emails", {
@@ -323,6 +337,44 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
     return { ok: true };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+}
+
+// « Calcul automatique de l'heure de prise en charge » (le client ne donne que
+// l'heure de rendez-vous) : duree du trajet par l'itineraire de l'IGN (gratuit,
+// sans cle), plus une marge de securite comme l'ancienne page de reservation
+// (15 min sous 30 min de trajet, 30 min au-dela), arrondi a 5 min.
+async function positionAdresse(texte) {
+  const params = new URLSearchParams({ q: texte, limit: "5", autocomplete: "0" });
+  const r = await fetch(`https://data.geopf.fr/geocodage/search?${params}`, { signal: AbortSignal.timeout(5000) });
+  if (!r.ok) return null;
+  const d = await r.json();
+  const f = (d.features || []).find((x) => x.properties && /^(06|83)/.test(String(x.properties.postcode || ""))) || (d.features || [])[0];
+  return f && f.geometry ? f.geometry.coordinates : null;
+}
+
+async function estimerHeurePc(depart, destination, heureRdv) {
+  try {
+    const [a, b] = await Promise.all([positionAdresse(depart), positionAdresse(destination)]);
+    if (!a || !b) return null;
+    const params = new URLSearchParams({
+      resource: "bdtopo-osrm", profile: "car", optimization: "fastest",
+      start: `${a[0]},${a[1]}`, end: `${b[0]},${b[1]}`, timeUnit: "minute", getSteps: "false",
+    });
+    const r = await fetch(`https://data.geopf.fr/navigation/itineraire?${params}`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    let duree = Number(d.duration);
+    if (!Number.isFinite(duree)) return null;
+    if (d.timeUnit === "second") duree /= 60;
+    if (d.timeUnit === "hour") duree *= 60;
+    duree = Math.ceil(duree);
+    const marge = duree < 30 ? 15 : 30;
+    const [h, m] = heureRdv.split(":").map(Number);
+    const minutes = Math.max(0, Math.floor((h * 60 + m - duree - marge) / 5) * 5);
+    return { heurePc: `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`, duree, marge };
+  } catch (e) {
+    return null;
   }
 }
 
@@ -442,6 +494,21 @@ export async function onRequestPost(context) {
     return jsonResponse(400, { ok: false, error: "Heure invalide" });
   }
 
+  // Heure de prise en charge a calculer (seule l'heure de RDV est donnee).
+  let heurePcFinale = heurePc;
+  let calcul = null;
+  if (!heurePc && heureRdv) {
+    calcul = await estimerHeurePc(priseEnCharge, destination, heureRdv);
+    if (calcul) {
+      heurePcFinale = calcul.heurePc;
+    } else {
+      // Trajet introuvable : course posee 1 h avant le RDV, a confirmer par la centrale.
+      const [h, m] = heureRdv.split(":").map(Number);
+      const minutes = Math.max(0, h * 60 + m - 60);
+      heurePcFinale = `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+    }
+  }
+
   const reference = genererReference();
   const donnees = {
     nom,
@@ -451,7 +518,10 @@ export async function onRequestPost(context) {
     destination,
     date,
     heureRdv,
-    heurePc,
+    heurePc: heurePcFinale,
+    pcCalculee: !!calcul,
+    pcADefinir: !heurePc && !calcul,
+    dureeTrajet: calcul ? calcul.duree : null,
     accompagnant: !!body.accompagnant,
     btoRetour: !!body.btoRetour,
     reservePar: nettoyerTexte(body.reservePar, CHAMPS_TEXTE_MAX),
