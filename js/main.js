@@ -17,6 +17,20 @@
     });
   }
 
+  // Liens internes (« Réserver »...) : defilement gere ici. Sans ca, un lien
+  // vers l'ancre deja presente dans l'adresse (visiteur arrive par le QR code
+  // ou un lien en .../#reserver) ne faisait rien du tout.
+  document.addEventListener("click", function (e) {
+    var lien = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!lien) return;
+    var id = lien.getAttribute("href").slice(1);
+    var cible = id && document.getElementById(id);
+    if (!cible) return;
+    e.preventDefault();
+    cible.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (history.replaceState) history.replaceState(null, "", "#" + id);
+  });
+
   // Gold progress bar under the header, filling left-to-right with scroll depth,
   // with a lit-fuse spark glowing at the advancing tip
   var headerProgressFill = document.getElementById("headerProgressFill");

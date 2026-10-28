@@ -32,6 +32,10 @@ body {
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  /* « clip » coupe le debordement sans faire du body une zone de defilement
+     (avec « hidden », les liens #reserver ne defilaient plus sur certains
+     telephones). Ignore par les navigateurs trop anciens, qui gardent hidden. */
+  overflow-x: clip;
 }
 section[id] { scroll-margin-top: 84px; }
 img { max-width: 100%; display: block; }
