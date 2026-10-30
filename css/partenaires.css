@@ -411,3 +411,14 @@ body.p-feuille-ouverte { overflow: hidden; }
 .p-fiche-appel:active { background: #f8f5ee; }
 .p-cache-copie { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; }
 @media (max-width: 340px) { .p-fiche-etiq { width: 68px; } }
+
+/* Compteurs compacts (chiffre a gauche, texte a droite) */
+.p-stats { gap: 8px; margin-top: 12px; }
+.p-stat { flex-direction: row; align-items: center; gap: 10px; padding: 9px 28px 9px 12px; border-radius: 14px; }
+.p-stat-nb { flex: none; font-size: 26px; min-width: 18px; }
+.p-stat-txt { min-width: 0; font-size: 12.5px; line-height: 1.2; }
+.p-stat-txt small { font-size: 11.5px; }
+.p-stat-chev { right: 8px; width: 16px; height: 16px; margin-top: -8px; }
+.p-recues { margin-top: 8px; }
+#vJour .p-nav-date { margin-top: 10px; }
+#pZoneAjouter { margin-top: 14px; }
