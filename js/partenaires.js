@@ -253,6 +253,27 @@
     return carte;
   }
 
+  // Date de naissance tapee au clavier : « 14051985 » -> « 14/05/1985 ».
+  function formaterDateSaisie(v) {
+    var c = String(v || "").replace(/\D/g, "").slice(0, 8);
+    return c.length > 4 ? c.slice(0, 2) + "/" + c.slice(2, 4) + "/" + c.slice(4) : c.length > 2 ? c.slice(0, 2) + "/" + c.slice(2) : c;
+  }
+
+  // « 14/05/1985 » ou « 14/05/85 » -> « 1985-05-14 » ; "" si vide, null si invalide.
+  function lireDateNaissance(v) {
+    var c = String(v || "").replace(/\D/g, "");
+    if (!c) return "";
+    if (c.length === 6) {
+      var aa = Number(c.slice(4)), ceSiecle = new Date().getFullYear() % 100;
+      c = c.slice(0, 4) + (aa > ceSiecle ? "19" : "20") + c.slice(4);
+    }
+    if (c.length !== 8) return null;
+    var j = Number(c.slice(0, 2)), m = Number(c.slice(2, 4)), a = Number(c.slice(4));
+    var d = new Date(a, m - 1, j);
+    if (d.getFullYear() !== a || d.getMonth() !== m - 1 || d.getDate() !== j || a < 1900 || d > new Date()) return null;
+    return a + "-" + c.slice(2, 4) + "-" + c.slice(0, 2);
+  }
+
   // Cle du numero de securite sociale (2A -> 19, 2B -> 18 pour la Corse).
   function cleNir(treize) {
     if (!/^[12378]\d{4}(\d{2}|2A|2B)\d{6}$/.test(treize)) return "";
@@ -1115,6 +1136,12 @@
       }
       this.value = formaterNir(c);
     });
+    form.elements.naissance.addEventListener("input", function () { this.value = formaterDateSaisie(this.value); });
+    form.elements.naissance.addEventListener("blur", function () {
+      var iso = lireDateNaissance(this.value);
+      if (iso) this.value = iso.split("-").reverse().join("/");
+      this.classList.toggle("p-invalide", iso === null);
+    });
     activerHeure(form.elements.heurePc);
     activerHeure(form.elements.heureRdv);
     function erreurForm(texte, champ) {
@@ -1135,6 +1162,8 @@
       var hPc = lireHeure(f.heurePc.value), hRdv = lireHeure(f.heureRdv.value);
       if (hPc === null) return erreurForm("Heure de prise en charge invalide : tapez par exemple 0815 pour 08h15.", f.heurePc);
       if (hRdv === null) return erreurForm("Heure de rendez-vous invalide : tapez par exemple 0845 pour 08h45.", f.heureRdv);
+      var naissance = lireDateNaissance(f.naissance.value);
+      if (naissance === null) return erreurForm("Date de naissance invalide : tapez par exemple 14051985 pour le 14/05/1985.", f.naissance);
       if (!hPc && !hRdv) return erreurForm("Indiquez l'heure de prise en charge ou de rendez-vous.", f.heurePc);
       // Un seul envoi a la fois (plusieurs appuis = une seule course).
       enCours = true;
@@ -1144,7 +1173,7 @@
       api("POST", "/courses", {
         type: form.querySelector("input[name=type]:checked").value,
         nom: [f.prenom.value.trim(), f.nom.value.trim()].filter(Boolean).join(" "), telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
-        nir: f.nir.value, naissance: f.naissance.value,
+        nir: f.nir.value, naissance: naissance,
         date: f.date.value, heurePc: hPc ? hPc.replace("h", ":") : "", heureRdv: hRdv ? hRdv.replace("h", ":") : "", commentaire: f.commentaire.value,
       }).then(function () {
         fermerFeuille();
