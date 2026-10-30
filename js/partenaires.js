@@ -536,6 +536,72 @@
     }).catch(function () {});
   }
 
+  // ----- Formulaire d'ajout : suggestions d'adresses et heures au clavier -----
+  function activerSuggestions(champ) {
+    var liste = el("ul", "p-suggestions");
+    liste.hidden = true;
+    champ.parentNode.appendChild(liste);
+    var minuterie = null, numero = 0;
+    function fermer() { liste.hidden = true; liste.textContent = ""; }
+    function afficher(elements) {
+      liste.textContent = "";
+      elements.forEach(function (e) {
+        var li = el("li");
+        li.appendChild(el("strong", null, e.titre));
+        if (e.detail) li.appendChild(el("span", null, e.detail));
+        li.addEventListener("mousedown", function (ev) { ev.preventDefault(); champ.value = e.valeur; fermer(); });
+        liste.appendChild(li);
+      });
+      liste.hidden = !elements.length;
+    }
+    champ.addEventListener("input", function () {
+      var texte = champ.value.trim();
+      clearTimeout(minuterie);
+      var connus = window.etablissementsConnus ? window.etablissementsConnus(texte) : [];
+      afficher(connus);
+      if (texte.length < 3) return;
+      var moi = ++numero;
+      minuterie = setTimeout(function () {
+        fetch("/api/adresses?q=" + encodeURIComponent(texte)).then(function (r) { return r.json(); }).then(function (d) {
+          if (moi !== numero) return;
+          afficher(connus.concat((d.adresses || []).map(function (a) { return { titre: a, valeur: a }; })).slice(0, 7));
+        }).catch(function () {});
+      }, 250);
+    });
+    champ.addEventListener("blur", function () { setTimeout(fermer, 150); });
+  }
+
+  // Chiffres tapes -> heure : une heure qui commence par 3 a 9 n'a qu'un
+  // chiffre (« 815 » = 08h15), sinon deux (« 1430 » = 14h30).
+  function chiffresHeure(texte) {
+    var c = String(texte || "").replace(/\D/g, "");
+    if (/^[3-9]/.test(c)) c = "0" + c;
+    return c.slice(0, 4);
+  }
+
+  // « 815 », « 0815 », « 8h15 », « 14 » -> « 08h15 », « 14h00 » ; "" si vide, null si invalide.
+  function lireHeure(texte) {
+    var c = chiffresHeure(texte);
+    if (!c) return "";
+    if (c.length <= 2) c = c.padStart(2, "0") + "00";
+    if (c.length === 3) c = c + "0";
+    var h = Number(c.slice(0, 2)), m = Number(c.slice(2, 4));
+    if (c.length !== 4 || h > 23 || m > 59) return null;
+    return String(h).padStart(2, "0") + "h" + String(m).padStart(2, "0");
+  }
+
+  function activerHeure(champ) {
+    champ.addEventListener("input", function () {
+      var c = chiffresHeure(champ.value);
+      champ.value = c.length > 2 ? c.slice(0, 2) + "h" + c.slice(2) : c;
+    });
+    champ.addEventListener("blur", function () {
+      var h = lireHeure(champ.value);
+      if (h) champ.value = h;
+      champ.classList.toggle("p-invalide", h === null);
+    });
+  }
+
   // ----- Onglets -----
   var vueActive = "jour";
   function recharger() {
@@ -586,18 +652,28 @@
       fenetre.hidden = false;
     });
     $("pFermer").addEventListener("click", function () { fenetre.hidden = true; });
+    activerSuggestions(form.elements.depart);
+    activerSuggestions(form.elements.destination);
+    activerHeure(form.elements.heurePc);
+    activerHeure(form.elements.heureRdv);
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var f = form.elements;
-      if (!f.heurePc.value && !f.heureRdv.value) {
+      var hPc = lireHeure(f.heurePc.value), hRdv = lireHeure(f.heureRdv.value);
+      if (hPc === null || hRdv === null) {
+        $("pErreurCourse").textContent = "Heure invalide : tapez par exemple 0815 pour 08h15.";
+        $("pErreurCourse").hidden = false;
+        return;
+      }
+      if (!hPc && !hRdv) {
         $("pErreurCourse").textContent = "Indiquez l'heure de prise en charge ou de rendez-vous.";
         $("pErreurCourse").hidden = false;
         return;
       }
       api("POST", "/courses", {
         type: form.querySelector("input[name=type]:checked").value,
-        nom: f.nom.value, telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
-        date: f.date.value, heurePc: f.heurePc.value, heureRdv: f.heureRdv.value, commentaire: f.commentaire.value,
+        nom: [f.prenom.value.trim(), f.nom.value.trim()].filter(Boolean).join(" "), telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
+        date: f.date.value, heurePc: hPc ? hPc.replace("h", ":") : "", heureRdv: hRdv ? hRdv.replace("h", ":") : "", commentaire: f.commentaire.value,
       }).then(function () {
         fenetre.hidden = true;
         jour = f.date.value;

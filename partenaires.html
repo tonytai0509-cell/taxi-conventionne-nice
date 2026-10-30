@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261106" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261107" />
 </head>
 <body>
   <header class="p-haut">
@@ -126,16 +126,17 @@
         <label><input type="radio" name="type" value="prive" /><span>Course privée</span></label>
       </div>
       <label>Client</label>
-      <div class="p-ligne"><input name="nom" placeholder="Prénom Nom" maxlength="120" /><input name="telephone" type="tel" placeholder="06 …" maxlength="30" /></div>
+      <div class="p-ligne"><input name="prenom" placeholder="Prénom" maxlength="60" autocomplete="off" /><input name="nom" placeholder="Nom" maxlength="60" autocomplete="off" /></div>
+      <input name="telephone" type="tel" placeholder="Téléphone 06 …" maxlength="30" class="p-espace" />
       <label>Départ</label>
-      <input name="depart" required maxlength="160" autocomplete="off" />
+      <div class="p-champ-adresse"><input name="depart" required maxlength="160" autocomplete="off" placeholder="Adresse ou raccourci (stg, p2, cal…)" /></div>
       <label>Destination</label>
-      <input name="destination" required maxlength="160" autocomplete="off" />
+      <div class="p-champ-adresse"><input name="destination" required maxlength="160" autocomplete="off" placeholder="Adresse ou raccourci (stg, p2, cal…)" /></div>
       <label>Date</label>
       <input name="date" type="date" required />
       <div class="p-ligne">
-        <div><label>Prise en charge</label><input name="heurePc" type="time" /></div>
-        <div><label>Rendez-vous</label><input name="heureRdv" type="time" /></div>
+        <div><label>Prise en charge</label><input name="heurePc" type="text" inputmode="numeric" placeholder="08h15" maxlength="5" autocomplete="off" /></div>
+        <div><label>Rendez-vous</label><input name="heureRdv" type="text" inputmode="numeric" placeholder="08h45" maxlength="5" autocomplete="off" /></div>
       </div>
       <label>Commentaire</label>
       <input name="commentaire" maxlength="500" placeholder="Fauteuil, bon de transport au retour…" />
@@ -146,6 +147,7 @@
   </div>
 
   <div class="p-message" id="pMessage" hidden></div>
-  <script src="/js/partenaires.js?v=20261106"></script>
+  <script src="/js/etablissements.js?v=20261106"></script>
+  <script src="/js/partenaires.js?v=20261107"></script>
 </body>
 </html>
