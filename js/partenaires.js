@@ -86,8 +86,8 @@
   function afficherConnexion(texte) {
     $("pAppli").hidden = true;
     $("pConnexion").hidden = false;
-    $("pTitre").textContent = "Espace partenaires";
     $("pQui").textContent = "taxi-conventionne06.fr/partenaires";
+    $("pSortir").hidden = true;
     if (texte) $("pConnexionTexte").textContent = texte;
   }
 
@@ -196,12 +196,43 @@
   }
 
   // ----- Vue Jour -----
+  // Carte « aucune course » avec une petite icone taxi.
+  function carteVide(titre, texte) {
+    var c = el("div", "p-vide-carte");
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 48 48");
+    svg.setAttribute("aria-hidden", "true");
+    ["M18 9h12l1.5 4h-15z", "M9 26l4-10a3 3 0 0 1 2.8-2h16.4a3 3 0 0 1 2.8 2l4 10", "M7 26h34v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z", "M12 36v3.5M36 36v3.5"].forEach(function (d) {
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+    });
+    [15, 33].forEach(function (x) {
+      var rond = document.createElementNS(ns, "circle");
+      rond.setAttribute("cx", x); rond.setAttribute("cy", "31"); rond.setAttribute("r", "2.6");
+      svg.appendChild(rond);
+    });
+    c.appendChild(svg);
+    c.appendChild(el("b", null, titre));
+    c.appendChild(el("span", null, texte));
+    return c;
+  }
+
   function chargerJour() {
-    $("pJourTitre").textContent = titreJour(jour);
+    var d = new Date(jour + "T12:00:00");
+    var t = JOURS[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()];
+    var estAujourdhui = jour === isoAujourdhui();
+    $("pJourTitre").textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    $("pJourSous").textContent = estAujourdhui ? "Aujourd'hui" : "";
+    $("pJourSous").hidden = !estAujourdhui;
     var liste = $("pListeJour");
     api("GET", "/courses?debut=" + jour).then(function (r) {
       liste.textContent = "";
-      if (!r.courses.length) { liste.appendChild(el("div", "p-vide", "Aucune course Google Ads ce jour-là.")); return; }
+      if (!r.courses.length) {
+        liste.appendChild(carteVide(estAujourdhui ? "Aucune course aujourd'hui" : "Aucune course ce jour-là", "Vos courses apparaîtront ici."));
+        return;
+      }
       r.courses.forEach(function (c) { liste.appendChild(ligneCourse(c)); });
     }).catch(function () {});
   }
@@ -212,7 +243,7 @@
     var liste = $("pListeSemaine");
     api("GET", "/courses?debut=" + debut + "&fin=" + fin).then(function (r) {
       liste.textContent = "";
-      if (!r.courses.length) { liste.appendChild(el("div", "p-vide", "Aucune course Google Ads cette semaine.")); return; }
+      if (!r.courses.length) { liste.appendChild(carteVide("Aucune course cette semaine", "Vos courses apparaîtront ici.")); return; }
       var dateCourante = null;
       r.courses.forEach(function (c) {
         if (c.date !== dateCourante) {
@@ -331,6 +362,24 @@
     return c;
   }
 
+  function pastille(paye) {
+    return el("span", "p-pastille-statut " + (paye ? "paye" : "du"), paye ? "Payé" : "À régler");
+  }
+
+  function iconeDocument() {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("class", "p-ico p-ico-doc");
+    ["M14 3.5H7a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8z", "M14 3.5V8h4.5", "M9 12.5h6M9 15.5h6"].forEach(function (d) {
+      var path = document.createElementNS(ns, "path");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+    });
+    return svg;
+  }
+
   function lienFacture(id) {
     var a = el("a", "p-facture-pdf", "📄 PDF");
     a.href = "/api/partenaires/factures/" + id;
@@ -339,35 +388,74 @@
     return a;
   }
 
+  // Ligne de la liste « Factures du mois » (administrateur).
   function ligneFacture(titre, montant, paye, factureId) {
-    var r = el("div", "p-facture");
-    var g = el("div", "p-facture-txt");
-    g.appendChild(el("b", null, titre));
-    g.appendChild(el("span", paye ? "p-paye" : "p-du", (montant == null ? "" : euros(montant) + " · ") + (paye ? "✅ payée" : "🔴 à régler")));
-    r.appendChild(g);
-    r.appendChild(factureId ? lienFacture(factureId) : el("span", "p-petit", "PDF à venir"));
+    var r = el(factureId ? "a" : "div", "p-facture-ligne");
+    if (factureId) {
+      r.href = "/api/partenaires/factures/" + factureId;
+      r.target = "_blank";
+      r.rel = "noopener";
+      r.setAttribute("aria-label", "Ouvrir la facture de " + titre);
+    }
+    r.appendChild(iconeDocument());
+    r.appendChild(el("span", "p-facture-mois", titre + (factureId ? "" : " · PDF à venir")));
+    r.appendChild(el("b", "p-facture-montant", montant == null ? "—" : euros(montant)));
+    r.appendChild(pastille(paye));
     return r;
   }
 
   function chargerBilan() {
     var zone = $("pBilan");
-    // Chauffeur : seulement ses factures, tous mois confondus.
+    var tm = titreMois(mois);
+    $("pMoisTitre").textContent = tm.charAt(0).toUpperCase() + tm.slice(1);
+    // Chauffeur : seulement ses factures.
     if (!moi.admin) {
-      $("pMoisTitre").parentNode.hidden = true;
       api("GET", "/mes-factures").then(function (r) {
         zone.textContent = "";
-        var bloc = el("div", "p-bloc");
+        var duMois = r.factures.filter(function (f) { return f.mois === mois; })[0];
+
+        // Montant reellement a regler pour le mois choisi.
+        var resume = el("div", "p-resume");
+        var g = el("div", "p-resume-txt");
+        g.appendChild(el("span", null, duMois && duMois.paye ? "Montant réglé" : "Montant à régler"));
+        g.appendChild(el("b", null, euros(duMois && duMois.montant != null ? duMois.montant : 0)));
+        resume.appendChild(g);
+        if (duMois && duMois.montant != null) resume.appendChild(pastille(duMois.paye));
+        else resume.appendChild(el("span", "p-pastille-statut vide", "Aucune facture"));
+        zone.appendChild(resume);
+
+        var bloc = el("div", "p-bloc p-mes-factures");
         bloc.appendChild(el("h3", null, "Mes factures"));
         if (!r.factures.length) bloc.appendChild(el("p", "p-petit", "Aucune facture pour le moment."));
         r.factures.forEach(function (f) {
           var t = titreMois(f.mois);
-          bloc.appendChild(ligneFacture(t.charAt(0).toUpperCase() + t.slice(1), f.montant, f.paye, f.factureId));
+          var ligne = el(f.factureId ? "a" : "div", "p-facture-ligne" + (f.mois === mois ? " choisie" : ""));
+          if (f.factureId) {
+            ligne.href = "/api/partenaires/factures/" + f.factureId + "?telecharger=1";
+            ligne.setAttribute("aria-label", "Télécharger la facture de " + t);
+          }
+          ligne.appendChild(iconeDocument());
+          ligne.appendChild(el("span", "p-facture-mois", t.charAt(0).toUpperCase() + t.slice(1)));
+          ligne.appendChild(el("b", "p-facture-montant", f.montant == null ? "—" : euros(f.montant)));
+          ligne.appendChild(pastille(f.paye));
+          bloc.appendChild(ligne);
         });
         zone.appendChild(bloc);
+
+        // Document du mois choisi.
+        if (duMois && duMois.factureId) {
+          var dl = el("a", "p-bouton p-bouton-telecharger", "Télécharger la facture");
+          dl.href = "/api/partenaires/factures/" + duMois.factureId + "?telecharger=1";
+          dl.insertBefore(iconeDocument(), dl.firstChild);
+          zone.appendChild(dl);
+        } else if (duMois) {
+          var att = el("div", "p-facture-attente", "Facture bientôt disponible");
+          att.insertBefore(iconeDocument(), att.firstChild);
+          zone.appendChild(att);
+        }
       }).catch(function () {});
       return;
     }
-    $("pMoisTitre").textContent = "Bilan de " + titreMois(mois);
     api("GET", "/bilan?mois=" + mois).then(function (b) {
       zone.textContent = "";
       var grille = el("div", "p-chiffres");
@@ -803,43 +891,66 @@
 
     // Ajout d'une course recue par telephone.
     var fenetre = $("pFenetre"), form = $("pFormCourse");
+    var enCours = false;
+    function fermerFeuille() {
+      fenetre.hidden = true;
+      document.body.classList.remove("p-feuille-ouverte");
+    }
     $("pBoutonAjouter").addEventListener("click", function () {
       form.reset();
       form.elements.date.value = jour;
       $("pErreurCourse").hidden = true;
+      Array.prototype.forEach.call(form.querySelectorAll(".p-invalide"), function (x) { x.classList.remove("p-invalide"); });
       fenetre.hidden = false;
+      document.body.classList.add("p-feuille-ouverte");
+      form.querySelector(".p-feuille-corps").scrollTop = 0;
     });
-    $("pFermer").addEventListener("click", function () { fenetre.hidden = true; });
+    $("pFermer").addEventListener("click", fermerFeuille);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !fenetre.hidden) fermerFeuille(); });
     activerSuggestions(form.elements.depart);
     activerSuggestions(form.elements.destination);
     activerHeure(form.elements.heurePc);
     activerHeure(form.elements.heureRdv);
+    function erreurForm(texte, champ) {
+      $("pErreurCourse").textContent = texte;
+      $("pErreurCourse").hidden = false;
+      if (champ) { champ.classList.add("p-invalide"); champ.focus(); }
+      else $("pErreurCourse").scrollIntoView({ block: "center", behavior: "smooth" });
+    }
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (enCours) return;
       var f = form.elements;
+      $("pErreurCourse").hidden = true;
+      Array.prototype.forEach.call(form.querySelectorAll(".p-invalide"), function (x) { x.classList.remove("p-invalide"); });
+      if (!f.depart.value.trim()) return erreurForm("Indiquez l'adresse de départ.", f.depart);
+      if (!f.destination.value.trim()) return erreurForm("Indiquez la destination.", f.destination);
+      if (!f.date.value) return erreurForm("Indiquez la date de la course.", f.date);
       var hPc = lireHeure(f.heurePc.value), hRdv = lireHeure(f.heureRdv.value);
-      if (hPc === null || hRdv === null) {
-        $("pErreurCourse").textContent = "Heure invalide : tapez par exemple 0815 pour 08h15.";
-        $("pErreurCourse").hidden = false;
-        return;
-      }
-      if (!hPc && !hRdv) {
-        $("pErreurCourse").textContent = "Indiquez l'heure de prise en charge ou de rendez-vous.";
-        $("pErreurCourse").hidden = false;
-        return;
-      }
+      if (hPc === null) return erreurForm("Heure de prise en charge invalide : tapez par exemple 0815 pour 08h15.", f.heurePc);
+      if (hRdv === null) return erreurForm("Heure de rendez-vous invalide : tapez par exemple 0845 pour 08h45.", f.heureRdv);
+      if (!hPc && !hRdv) return erreurForm("Indiquez l'heure de prise en charge ou de rendez-vous.", f.heurePc);
+      // Un seul envoi a la fois (plusieurs appuis = une seule course).
+      enCours = true;
+      var bouton = $("pEnregistrerCourse");
+      bouton.disabled = true;
+      bouton.textContent = "Enregistrement…";
       api("POST", "/courses", {
         type: form.querySelector("input[name=type]:checked").value,
         nom: [f.prenom.value.trim(), f.nom.value.trim()].filter(Boolean).join(" "), telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
         date: f.date.value, heurePc: hPc ? hPc.replace("h", ":") : "", heureRdv: hRdv ? hRdv.replace("h", ":") : "", commentaire: f.commentaire.value,
       }).then(function () {
-        fenetre.hidden = true;
+        fermerFeuille();
         jour = f.date.value;
-        message("Course ajoutée.");
+        message("Course enregistrée.");
         changerVue("jour");
       }).catch(function (err) {
-        $("pErreurCourse").textContent = err.message;
-        $("pErreurCourse").hidden = false;
+        // Les champs restent remplis : on peut corriger et renvoyer.
+        erreurForm(err.message === "Non connecté" ? "Vous n'êtes plus connecté : rouvrez votre lien personnel." : err.message || "Enregistrement impossible, réessayez.");
+      }).then(function () {
+        enCours = false;
+        bouton.disabled = false;
+        bouton.textContent = "Enregistrer la course";
       });
     });
 
@@ -906,14 +1017,13 @@
       moi = res.j;
       $("pConnexion").hidden = true;
       $("pAppli").hidden = false;
-      $("pQui").textContent = "Connecté : " + moi.nom + (moi.admin ? " (administrateur)" : "");
-      var sortir = el("button", null, "Se déconnecter");
-      sortir.addEventListener("click", function () {
+      $("pQui").textContent = moi.nom + " · " + (moi.admin ? "Administrateur" : "Partenaire");
+      $("pSortir").hidden = false;
+      $("pSortir").addEventListener("click", function () {
         if (!confirm("Se déconnecter ? Il faudra rouvrir votre lien personnel.")) return;
         api("POST", "/deconnexion").then(function () { location.reload(); });
       });
-      $("pQui").appendChild(sortir);
-      $("pBoutonAjouter").hidden = !moi.peutAjouter;
+      $("pZoneAjouter").hidden = !moi.peutAjouter;
       $("pOngletGestion").hidden = !moi.admin;
       $("pOngletMes").hidden = !moi.admin;
       if (moi.admin) $("pOnglets").classList.add("cinq");

@@ -463,7 +463,7 @@ export async function routePartenaires(request, env, url) {
     return new Response(octets, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${String(f.nom_fichier).replace(/[^\w.\- ]/g, "_")}"`,
+        "Content-Disposition": `${url.searchParams.get("telecharger") ? "attachment" : "inline"}; filename="${String(f.nom_fichier).replace(/[^\w.\- ]/g, "_")}"`,
         "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },

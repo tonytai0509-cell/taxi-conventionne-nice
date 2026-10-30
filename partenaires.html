@@ -11,13 +11,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261109" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261110" />
 </head>
 <body>
   <header class="p-haut">
-    <div class="p-sur">CENTRALE TAXI NICE · ESPACE PARTENAIRES</div>
-    <h1 id="pTitre">Courses Google Ads</h1>
-    <div class="p-qui" id="pQui"></div>
+    <div class="p-haut-txt">
+      <div class="p-sur">CENTRALE TAXI NICE</div>
+      <h1 id="pTitre">Espace partenaires</h1>
+      <div class="p-qui" id="pQui"></div>
+    </div>
+    <button class="p-sortir" id="pSortir" type="button" aria-label="Se déconnecter" title="Se déconnecter" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/></svg>
+    </button>
   </header>
 
   <main id="pConnexion" class="p-connexion" hidden>
@@ -37,11 +42,14 @@
     </nav>
 
     <section id="vJour">
-      <button class="p-ajouter" id="pBoutonAjouter" hidden>＋ Ajouter une course reçue par téléphone</button>
-      <div class="p-nav-jour">
-        <button id="pJourAvant" aria-label="Jour précédent">‹</button>
-        <div id="pJourTitre"></div>
-        <button id="pJourApres" aria-label="Jour suivant">›</button>
+      <div class="p-nav-date">
+        <button id="pJourAvant" type="button" aria-label="Jour précédent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="p-nav-date-txt"><b id="pJourTitre"></b><span id="pJourSous"></span></div>
+        <button id="pJourApres" type="button" aria-label="Jour suivant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div id="pZoneAjouter" hidden>
+        <button class="p-ajouter" id="pBoutonAjouter" type="button">＋ Ajouter une course</button>
+        <p class="p-ajouter-aide">Pour un client ayant appelé après une publicité</p>
       </div>
       <div id="pListeJour"></div>
     </section>
@@ -49,10 +57,10 @@
     <section id="vSemaine" hidden><div id="pListeSemaine"></div></section>
 
     <section id="vBilan" hidden>
-      <div class="p-nav-jour">
-        <button id="pMoisAvant" aria-label="Mois précédent">‹</button>
-        <div id="pMoisTitre"></div>
-        <button id="pMoisApres" aria-label="Mois suivant">›</button>
+      <div class="p-nav-date">
+        <button id="pMoisAvant" type="button" aria-label="Mois précédent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="p-nav-date-txt"><b id="pMoisTitre"></b></div>
+        <button id="pMoisApres" type="button" aria-label="Mois suivant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </div>
       <div id="pBilan"></div>
     </section>
@@ -149,38 +157,59 @@
     </section>
   </main>
 
-  <div class="p-fond" id="pFenetre" hidden>
-    <form class="p-fenetre p-form" id="pFormCourse">
-      <h3>Ajouter une course</h3>
-      <p class="p-petit">Client venu par la pub, qui a appelé.</p>
-      <label>Type</label>
-      <div class="p-choix">
-        <label><input type="radio" name="type" value="medical" checked /><span>Transport médical</span></label>
-        <label><input type="radio" name="type" value="prive" /><span>Course privée</span></label>
+  <div class="p-feuille" id="pFenetre" role="dialog" aria-modal="true" aria-labelledby="pFeuilleTitre" hidden>
+    <form class="p-feuille-form p-form" id="pFormCourse" novalidate>
+      <header class="p-feuille-haut">
+        <div class="p-feuille-titre">
+          <h2 id="pFeuilleTitre">Ajouter une course</h2>
+          <p>Client issu de Google Ads · appel téléphonique</p>
+        </div>
+        <button class="p-feuille-fermer" type="button" id="pFermer" aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </header>
+      <div class="p-feuille-corps">
+        <div class="p-segment">
+          <label><input type="radio" name="type" value="medical" checked /><span>Transport médical</span></label>
+          <label><input type="radio" name="type" value="prive" /><span>Course privée</span></label>
+        </div>
+
+        <fieldset class="p-carte-form">
+          <legend><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.6 7-5.6s6.2 2 7 5.6"/></svg>Client</legend>
+          <div class="p-ligne">
+            <div><label for="fPrenom">Prénom</label><input id="fPrenom" name="prenom" placeholder="Prénom" maxlength="60" autocomplete="off" autocapitalize="words" /></div>
+            <div><label for="fNom">Nom</label><input id="fNom" name="nom" placeholder="Nom" maxlength="60" autocomplete="off" autocapitalize="words" /></div>
+          </div>
+          <label for="fTel">Téléphone</label>
+          <input id="fTel" name="telephone" type="tel" inputmode="tel" placeholder="06 …" maxlength="30" autocomplete="off" />
+        </fieldset>
+
+        <fieldset class="p-carte-form">
+          <legend><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Trajet</legend>
+          <label for="fDepart">Départ</label>
+          <div class="p-champ-adresse"><input id="fDepart" name="depart" required maxlength="160" autocomplete="off" placeholder="Adresse ou raccourci (stg, p2…)" /></div>
+          <label for="fDest">Destination</label>
+          <div class="p-champ-adresse"><input id="fDest" name="destination" required maxlength="160" autocomplete="off" placeholder="Adresse ou raccourci (stg, p2…)" /></div>
+        </fieldset>
+
+        <fieldset class="p-carte-form">
+          <legend><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>Date et horaires</legend>
+          <label for="fDate">Date</label>
+          <input id="fDate" name="date" type="date" required />
+          <div class="p-ligne p-ligne-heures">
+            <div><label for="fPc">Prise en charge</label><input id="fPc" name="heurePc" type="text" inputmode="numeric" placeholder="08h15" maxlength="5" autocomplete="off" /></div>
+            <div><label for="fRdv">Rendez-vous</label><input id="fRdv" name="heureRdv" type="text" inputmode="numeric" placeholder="08h45" maxlength="5" autocomplete="off" /></div>
+          </div>
+          <label for="fCom">Commentaire <span class="p-optionnel">(facultatif)</span></label>
+          <input id="fCom" name="commentaire" maxlength="500" placeholder="Fauteuil, bon de transport…" />
+        </fieldset>
+
+        <div class="p-erreur" id="pErreurCourse" role="alert" hidden></div>
+        <button class="p-bouton p-bouton-enregistrer" type="submit" id="pEnregistrerCourse">Enregistrer la course</button>
       </div>
-      <label>Client</label>
-      <div class="p-ligne"><input name="prenom" placeholder="Prénom" maxlength="60" autocomplete="off" /><input name="nom" placeholder="Nom" maxlength="60" autocomplete="off" /></div>
-      <input name="telephone" type="tel" placeholder="Téléphone 06 …" maxlength="30" class="p-espace" />
-      <label>Départ</label>
-      <div class="p-champ-adresse"><input name="depart" required maxlength="160" autocomplete="off" placeholder="Adresse ou raccourci (stg, p2, cal…)" /></div>
-      <label>Destination</label>
-      <div class="p-champ-adresse"><input name="destination" required maxlength="160" autocomplete="off" placeholder="Adresse ou raccourci (stg, p2, cal…)" /></div>
-      <label>Date</label>
-      <input name="date" type="date" required />
-      <div class="p-ligne">
-        <div><label>Prise en charge</label><input name="heurePc" type="text" inputmode="numeric" placeholder="08h15" maxlength="5" autocomplete="off" /></div>
-        <div><label>Rendez-vous</label><input name="heureRdv" type="text" inputmode="numeric" placeholder="08h45" maxlength="5" autocomplete="off" /></div>
-      </div>
-      <label>Commentaire</label>
-      <input name="commentaire" maxlength="500" placeholder="Fauteuil, bon de transport au retour…" />
-      <div class="p-erreur" id="pErreurCourse" hidden></div>
-      <button class="p-bouton" type="submit">Ajouter à l'espace partenaires</button>
-      <button class="p-lien-bouton" type="button" id="pFermer">Annuler</button>
     </form>
   </div>
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261109"></script>
+  <script src="/js/partenaires.js?v=20261110"></script>
 </body>
 </html>
