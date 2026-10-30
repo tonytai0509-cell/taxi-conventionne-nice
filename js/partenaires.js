@@ -83,6 +83,50 @@
     if (texte) $("pConnexionTexte").textContent = texte;
   }
 
+  // ----- Ligne repliable : « 08h15  45 bd Gambetta → Archet », detail au toucher -----
+  var ouvertes = {};
+
+  // Debut d'adresse : avant la virgule et le code postal, voies abregees.
+  function adresseCourte(a) {
+    var s = String(a || "").split(",")[0].replace(/\s*\b\d{5}\b.*$/, "").trim();
+    s = s.replace(/\bboulevard\b/gi, "bd").replace(/\bavenue\b/gi, "av.").replace(/\bchemin\b/gi, "ch.")
+      .replace(/\broute\b/gi, "rte").replace(/\bplace\b/gi, "pl.").replace(/\ballée\b/gi, "all.")
+      .replace(/^hôpital\b/i, "Hôp.").replace(/^clinique\b/i, "Clin.").replace(/^centre\b/i, "Ctre").replace(/\bmaréchal\b/gi, "Mal");
+    return s || String(a || "");
+  }
+
+  function ligneRepliable(cle, heureTexte, depart, destination, pastille, classeEtat, detail) {
+    var bloc = el("div", "p-repli " + classeEtat + (ouvertes[cle] ? " ouverte" : ""));
+    var tete = el("button", "p-repli-tete");
+    tete.type = "button";
+    tete.appendChild(el("span", "p-pastille", pastille));
+    tete.appendChild(el("span", "p-repli-heure", heureTexte));
+    tete.appendChild(el("span", "p-repli-trajet", adresseCourte(depart) + " → " + adresseCourte(destination)));
+    tete.appendChild(el("span", "p-repli-fleche", "▾"));
+    tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+    detail.hidden = !ouvertes[cle];
+    tete.addEventListener("click", function () {
+      ouvertes[cle] = !ouvertes[cle];
+      detail.hidden = !ouvertes[cle];
+      bloc.classList.toggle("ouverte", !!ouvertes[cle]);
+      tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+    });
+    bloc.appendChild(tete);
+    bloc.appendChild(detail);
+    return bloc;
+  }
+
+  function ligneCourse(c) {
+    var etat = c.annulee ? "annulee" : c.prisePar ? "prise" : "libre";
+    var pastille = c.annulee ? "✕" : c.prisePar ? "✓" : "●";
+    return ligneRepliable("c" + c.id, heure(c.heurePc) || "RDV " + heure(c.heureRdv), c.depart, c.destination, pastille, etat, carteCourse(c));
+  }
+
+  function ligneMaCourse(c) {
+    return ligneRepliable("m" + c.id, c.pcADefinir ? "PC ?" : heure(c.heurePc) || "RDV " + heure(c.heureRdv), c.depart, c.destination,
+      c.saisie ? "✓" : "●", c.saisie ? "prise" : "a-saisir", carteMaCourse(c));
+  }
+
   // ----- Carte d'une course -----
   function carteCourse(c) {
     var carte = el("div", "p-carte" + (c.priseParMoi ? " moi" : "") + (c.annulee ? " annulee" : ""));
@@ -161,7 +205,7 @@
     api("GET", "/courses?debut=" + jour).then(function (r) {
       liste.textContent = "";
       if (!r.courses.length) { liste.appendChild(el("div", "p-vide", "Aucune course Google Ads ce jour-là.")); return; }
-      r.courses.forEach(function (c) { liste.appendChild(carteCourse(c)); });
+      r.courses.forEach(function (c) { liste.appendChild(ligneCourse(c)); });
     }).catch(function () {});
   }
 
@@ -179,7 +223,7 @@
           var n = r.courses.filter(function (x) { return x.date === c.date; }).length;
           liste.appendChild(el("div", "p-titre-jour", titreJour(c.date) + " · " + n + " course" + (n > 1 ? "s" : "")));
         }
-        liste.appendChild(carteCourse(c));
+        liste.appendChild(ligneCourse(c));
       });
     }).catch(function () {});
   }
@@ -244,7 +288,7 @@
           var n = r.courses.filter(function (x) { return x.date === c.date; }).length;
           liste.appendChild(el("div", "p-titre-jour", titreJour(c.date) + " · " + n + " course" + (n > 1 ? "s" : "")));
         }
-        liste.appendChild(carteMaCourse(c));
+        liste.appendChild(ligneMaCourse(c));
       });
     }).catch(function () {});
   }
