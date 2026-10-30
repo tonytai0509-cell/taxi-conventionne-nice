@@ -232,7 +232,6 @@
       liste.textContent = "";
       var actives = r.courses.filter(function (c) { return !c.annulee; }).length;
       $("pJourCompte").textContent = actives + " course" + (actives > 1 ? "s" : "");
-      $("pAideDetails").hidden = !r.courses.length;
       if (!r.courses.length) {
         liste.appendChild(carteVide(estAujourdhui ? "Aucune course aujourd'hui" : "Aucune course ce jour-là", "Vos courses apparaîtront ici."));
         return;
