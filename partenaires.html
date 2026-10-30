@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261101" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261102" />
 </head>
 <body>
   <header class="p-haut">
@@ -70,11 +70,18 @@
 
     <section id="vGestion" hidden>
       <div class="p-bloc">
+        <h3>SMS des réservations</h3>
+        <p class="p-petit">Un seul numéro reçoit le SMS à chaque nouvelle course Google Ads : celui qui a la ligne. Changez-le quand la ligne tourne.</p>
+        <p class="p-petit" id="pSmsActuel"></p>
+        <div class="p-raccourcis" id="pSmsRaccourcis"></div>
+        <div class="p-ligne"><input id="pSmsNumero" type="tel" placeholder="06 …" maxlength="30" /><button class="p-bouton p-bouton-petit" id="pSmsOk" type="button">Enregistrer</button></div>
+      </div>
+      <div class="p-bloc">
         <h3>Partenaires</h3>
         <div id="pListePartenaires"></div>
         <form id="pFormPartenaire" class="p-form">
           <label>Nouveau partenaire</label>
-          <div class="p-ligne"><input name="nom" placeholder="Prénom" required maxlength="60" /><input name="telephone" type="tel" placeholder="06 … (SMS des courses)" maxlength="30" /></div>
+          <div class="p-ligne"><input name="nom" placeholder="Prénom" required maxlength="60" /><input name="telephone" type="tel" placeholder="06 …" maxlength="30" /></div>
           <label class="p-case"><input type="checkbox" name="peutAjouter" /> Peut ajouter des courses reçues par téléphone</label>
           <button class="p-bouton" type="submit">Créer son lien personnel</button>
         </form>
@@ -136,6 +143,6 @@
   </div>
 
   <div class="p-message" id="pMessage" hidden></div>
-  <script src="/js/partenaires.js?v=20261101"></script>
+  <script src="/js/partenaires.js?v=20261102"></script>
 </body>
 </html>

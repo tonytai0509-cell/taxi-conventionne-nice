@@ -47,6 +47,13 @@
     return t;
   }
 
+  // « 2026-10-31 08:12:00 » (UTC, D1) -> « 09h12 » heure de Paris.
+  function heureLocale(utc) {
+    var d = new Date(String(utc).replace(" ", "T") + "Z");
+    if (isNaN(d)) return "";
+    return String(d.getHours()).padStart(2, "0") + "h" + String(d.getMinutes()).padStart(2, "0");
+  }
+
   function titreMois(m) { return MOIS[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4); }
   function heure(h) { return h ? h.replace(":", "h") : ""; }
   function euros(n) { return n == null ? "—" : n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " €"; }
@@ -117,8 +124,8 @@
   }
 
   function ligneCourse(c) {
-    var etat = c.annulee ? "annulee" : c.prisePar ? "prise" : "libre";
-    var pastille = c.annulee ? "✕" : c.prisePar ? "✓" : "●";
+    var etat = c.annulee ? "annulee" : c.dansCaree ? "prise" : "libre";
+    var pastille = c.annulee ? "✕" : c.dansCaree ? "✓" : "●";
     return ligneRepliable("c" + c.id, heure(c.heurePc) || "RDV " + heure(c.heureRdv), c.depart, c.destination, pastille, etat, carteCourse(c));
   }
 
@@ -129,7 +136,7 @@
 
   // ----- Carte d'une course -----
   function carteCourse(c) {
-    var carte = el("div", "p-carte" + (c.priseParMoi ? " moi" : "") + (c.annulee ? " annulee" : ""));
+    var carte = el("div", "p-carte" + (c.annulee ? " annulee" : ""));
     var l1 = el("div", "p-l1");
     l1.appendChild(el("span", "p-heure", heure(c.heurePc) || "RDV " + heure(c.heureRdv)));
     l1.appendChild(el("span", "p-type", c.type === "prive" ? "Course privée" : "Transport médical"));
@@ -147,29 +154,20 @@
     var infos = [c.options, c.commentaire].filter(Boolean).join(" · ");
     if (infos) carte.appendChild(el("div", "p-info", infos));
 
-    var etat = el("div", "p-etat " + (c.prisePar ? "pris" : "libre"));
+    // Dispatch dans Caree : on note seulement qui l'y a mise.
+    var etat = el("div", "p-etat " + (c.dansCaree ? "pris" : "libre"));
     if (c.annulee) {
       etat.className = "p-etat";
       etat.textContent = "✕ Annulée";
-    } else if (c.prisePar) {
-      etat.appendChild(document.createTextNode("✓ Prise par " + c.prisePar));
-      if (c.priseParMoi || moi.admin) {
-        var lib = el("button", "p-petit-bouton", c.priseParMoi ? "Je ne peux plus" : "Libérer");
-        lib.addEventListener("click", function () {
-          if (!confirm("Remettre cette course à disposition des partenaires ?")) return;
-          api("POST", "/courses/" + c.id + "/liberer").then(function () { message("Course remise à disposition."); recharger(); }).catch(function (e) { message(e.message); });
-        });
-        etat.appendChild(lib);
-      }
     } else {
-      etat.appendChild(document.createTextNode("● Libre"));
-      var prendre = el("button", "p-prendre", "Je la prends");
-      prendre.addEventListener("click", function () {
-        prendre.disabled = true;
-        api("POST", "/courses/" + c.id + "/prendre").then(function () { message("C'est noté : la course est à vous."); recharger(); })
-          .catch(function (e) { message(e.message); recharger(); });
+      var caree = el("button", "p-caree" + (c.dansCaree ? " fait" : ""),
+        c.dansCaree ? "✓ Mise dans Caree par " + c.careePar + (c.careeLe ? " · " + heureLocale(c.careeLe) : "") : "☐ Pas encore dans Caree");
+      caree.addEventListener("click", function () {
+        if (c.dansCaree && !confirm("Elle n'est finalement pas dans Caree ?")) return;
+        caree.disabled = true;
+        api("POST", "/courses/" + c.id + "/caree").then(recharger).catch(function (e) { message(e.message); recharger(); });
       });
-      etat.appendChild(prendre);
+      etat.appendChild(caree);
     }
     if (moi.admin) {
       var ann = el("button", "p-petit-bouton", c.annulee ? "Rétablir" : "Annuler");
@@ -192,8 +190,6 @@
         cl.appendChild(document.createTextNode(" "));
       });
       carte.appendChild(cl);
-    } else if (!c.prisePar && !c.annulee) {
-      carte.appendChild(el("div", "p-cache", "Nom et téléphone du client affichés à celui qui prend la course"));
     }
     return carte;
   }
@@ -328,23 +324,10 @@
       grille.appendChild(chiffre(String(b.total), "courses Google Ads"));
       grille.appendChild(chiffre(euros(b.depense), "budget dépensé"));
       grille.appendChild(chiffre(b.coutParCourse == null ? "—" : euros(b.coutParCourse), "coût par course"));
-      grille.appendChild(chiffre(String(b.nonPrises), "courses non prises"));
+      grille.appendChild(chiffre(String(b.pasDansCaree), "pas encore dans Caree"));
       zone.appendChild(grille);
       if (b.parTelephone) zone.appendChild(el("p", "p-petit p-marge", "Dont " + b.parTelephone + " reçue(s) par téléphone."));
 
-      var bloc = el("div", "p-bloc");
-      bloc.appendChild(el("h3", null, "Courses prises par chacun"));
-      var max = Math.max(1, Math.max.apply(null, b.partenaires.map(function (p) { return p.courses; })));
-      b.partenaires.forEach(function (p) {
-        var r = el("div", "p-rang");
-        r.appendChild(el("span", null, p.nom));
-        r.appendChild(el("b", null, String(p.courses)));
-        bloc.appendChild(r);
-        var barre = el("div", "p-barre");
-        barre.style.width = Math.max(3, Math.round((p.courses / max) * 100)) + "%";
-        bloc.appendChild(barre);
-      });
-      zone.appendChild(bloc);
 
       var budget = el("div", "p-bloc");
       budget.appendChild(el("h3", null, "Participation au budget"));
@@ -392,7 +375,7 @@
       r.partenaires.forEach(function (p) {
         var d = el("div", "p-partenaire");
         d.appendChild(el("div", "nom", p.nom + (p.admin ? " (vous, admin)" : "") + (p.actif ? "" : " · désactivé")));
-        d.appendChild(el("div", "det", [p.telephone ? "📞 " + p.telephone : "pas de téléphone (pas de SMS)", p.peut_ajouter ? "peut ajouter des courses" : ""].filter(Boolean).join(" · ")));
+        d.appendChild(el("div", "det", [p.telephone ? "📞 " + p.telephone : "pas de téléphone", p.peut_ajouter ? "peut ajouter des courses" : ""].filter(Boolean).join(" · ")));
         if (!p.admin) {
           var act = el("div", "act");
           function bouton(texte, corps, apres) {
@@ -407,7 +390,7 @@
           bouton("Nouveau lien", { nouveauLien: true }, function (res) { afficherLien(p.nom, res.lien); message("L'ancien lien ne marche plus."); });
           var tel = el("button", null, "Téléphone");
           tel.addEventListener("click", function () {
-            var t = prompt("Téléphone de " + p.nom + " (pour les SMS des nouvelles courses) :", p.telephone || "");
+            var t = prompt("Téléphone de " + p.nom + " :", p.telephone || "");
             if (t === null) return;
             api("POST", "/admin/partenaires/" + p.id, { telephone: t }).then(chargerPartenaires).catch(function (e) { message(e.message); });
           });
@@ -417,6 +400,29 @@
         zone.appendChild(d);
       });
     }).catch(function () {});
+  }
+
+  // Ligne de permanence : le seul numero qui recoit les SMS des reservations.
+  function chargerSms() {
+    Promise.all([api("GET", "/admin/sms"), api("GET", "/admin/partenaires")]).then(function (r) {
+      $("pSmsNumero").value = r[0].numero || "";
+      $("pSmsActuel").textContent = r[0].numero ? "Les SMS partent actuellement au " + r[0].numero + "." : "Aucun numéro : personne ne reçoit de SMS.";
+      var zone = $("pSmsRaccourcis");
+      zone.textContent = "";
+      r[1].partenaires.filter(function (p) { return p.actif && p.telephone; }).forEach(function (p) {
+        var b = el("button", null, "📱 " + p.nom);
+        b.type = "button";
+        b.addEventListener("click", function () { enregistrerSms(p.telephone, p.nom); });
+        zone.appendChild(b);
+      });
+    }).catch(function () {});
+  }
+
+  function enregistrerSms(numero, nom) {
+    api("POST", "/admin/sms", { numero: numero }).then(function () {
+      message(numero ? "Les SMS iront maintenant " + (nom ? "à " + nom : "au " + numero) + "." : "Plus aucun SMS envoyé.");
+      chargerSms();
+    }).catch(function (e) { message(e.message); });
   }
 
   function chargerBudget() {
@@ -460,7 +466,7 @@
     if (vueActive === "semaine") chargerSemaine();
     if (vueActive === "bilan") chargerBilan();
     if (vueActive === "mes") chargerMes();
-    if (vueActive === "gestion") { chargerPartenaires(); chargerBudget(); }
+    if (vueActive === "gestion") { chargerSms(); chargerPartenaires(); chargerBudget(); }
   }
 
   function changerVue(v) {
@@ -536,6 +542,7 @@
         chargerPartenaires();
       }).catch(function (err) { message(err.message); });
     });
+    $("pSmsOk").addEventListener("click", function () { enregistrerSms($("pSmsNumero").value.trim()); });
     $("pDepenseOk").addEventListener("click", function () {
       api("POST", "/admin/budget", { mois: moisBudget, depense: Number($("pDepense").value || 0) }).then(function () { message("Dépense enregistrée."); }).catch(function (e) { message(e.message); });
     });

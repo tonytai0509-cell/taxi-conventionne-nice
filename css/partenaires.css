@@ -137,3 +137,7 @@ textarea { resize: vertical; }
 .p-repli.ouverte .p-repli-fleche { transform: rotate(180deg); }
 .p-repli .p-carte { margin: 0; border-radius: 0; box-shadow: none; border-top: 1px solid #f0ebe0; }
 .p-repli .p-carte.moi { border: 0; border-top: 1px solid #e9d9ae; }
+.p-caree { border: 1.5px solid var(--trait); background: #fff; color: var(--nuit); font-weight: 800; border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+.p-caree.fait { border-color: var(--vert); color: var(--vert); }
+.p-raccourcis { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.p-raccourcis button { border: 1.5px solid var(--trait); background: #fff; border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 700; color: var(--nuit); cursor: pointer; }

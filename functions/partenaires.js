@@ -11,9 +11,13 @@
 // Google Ads, d'un client qui n'est pas dans la liste des clients de Tony,
 // arrivent ici. QR code, anciens clients, recherche Google : a Tony seul.
 //
-// Donnees de sante : nom et telephone du client ne sont montres qu'au
-// chauffeur qui a pris la course (et a l'admin), et effaces 30 jours apres
-// la date de la course. Le recap « Mes courses » (admin seul) est efface
+// Dispatch : il se fait dans le logiciel Caree. Ici, n'importe quel
+// partenaire marque la course « mise dans Caree » (qui et quand), pour
+// eviter les doublons ; tous voient donc le nom et le telephone du client,
+// effaces 30 jours apres la date de la course.
+//
+// SMS : un seul numero les recoit, celui de la ligne de permanence (reglage
+// de l'administrateur, change quand la ligne tourne). Le recap « Mes courses » (admin seul) est efface
 // entierement au meme delai.
 
 const COOKIE = "partenaire";
@@ -85,12 +89,20 @@ const SCHEMA = [
      cree_le TEXT NOT NULL DEFAULT (datetime('now'))
    )`,
   `CREATE INDEX IF NOT EXISTS idx_mes_courses_date ON mes_courses (date)`,
+  `CREATE TABLE IF NOT EXISTS reglages (cle TEXT PRIMARY KEY, valeur TEXT)`,
+];
+
+// Colonnes ajoutees apres coup (ALTER TABLE echoue si elles existent deja).
+const COLONNES = [
+  "ALTER TABLE courses ADD COLUMN caree_par INTEGER",
+  "ALTER TABLE courses ADD COLUMN caree_le TEXT",
 ];
 
 let schemaPret = false;
 async function preparer(db) {
   if (schemaPret) return;
   for (const sql of SCHEMA) await db.prepare(sql).run();
+  for (const sql of COLONNES) await db.prepare(sql).run().catch(() => null);
   schemaPret = true;
 }
 
@@ -220,14 +232,20 @@ function versInternational(numero) {
   return brut;
 }
 
-async function prevenirPartenaires(env, c, saufId = null) {
+async function numeroPermanence(db) {
+  const r = await db.prepare("SELECT valeur FROM reglages WHERE cle = 'sms_permanence'").first();
+  return (r && r.valeur) || "";
+}
+
+// SMS a la ligne de permanence seulement.
+async function prevenirPartenaires(env, c) {
   if (!env.SMS_GATEWAY_USERNAME || !env.SMS_GATEWAY_PASSWORD) return;
-  const { results } = await env.DB.prepare("SELECT id, telephone FROM partenaires WHERE actif = 1 AND telephone IS NOT NULL AND telephone <> ''").all();
-  const numeros = (results || []).filter((p) => p.id !== saufId).map((p) => versInternational(p.telephone)).filter((n) => n.length >= 10);
-  if (!numeros.length) return;
+  const numero = versInternational(await numeroPermanence(env.DB));
+  if (numero.length < 10) return;
+  const numeros = [numero];
   const [, m, j] = c.date.split("-");
   const ville = (a) => (String(a).match(/\d{5}\s+([^,]+)/) || [])[1] || String(a).split(",")[0];
-  const message = `🚕 Nouvelle course Google Ads libre : ${j}/${m}${c.heure ? " " + c.heure.replace(":", "h") : ""}, ${ville(c.depart)} → ${c.destination}. Pour la prendre : taxi-conventionne06.fr/partenaires`;
+  const message = `🚕 Nouvelle course Google Ads : ${j}/${m}${c.heure ? " " + c.heure.replace(":", "h") : ""}, ${ville(c.depart)} → ${c.destination}. A mettre dans Caree : taxi-conventionne06.fr/partenaires`;
   try {
     await fetch("https://api.sms-gate.app/3rdparty/v1/messages?skipPhoneValidation=true", {
       method: "POST",
@@ -245,7 +263,6 @@ async function prevenirPartenaires(env, c, saufId = null) {
 // ---------------------------------------------------------------------------
 
 function vueCourse(c, moi, noms) {
-  const visible = moi.admin || c.prise_par === moi.id;
   return {
     id: c.id,
     date: c.date,
@@ -259,10 +276,11 @@ function vueCourse(c, moi, noms) {
     origine: c.origine,
     parTelephone: c.ajoutee_par != null,
     ajouteePar: c.ajoutee_par != null ? noms[c.ajoutee_par] || "?" : null,
-    prisePar: c.prise_par != null ? (c.prise_par === moi.id ? "vous" : noms[c.prise_par] || "?") : null,
-    priseParMoi: c.prise_par === moi.id,
+    dansCaree: c.caree_par != null,
+    careePar: c.caree_par != null ? (c.caree_par === moi.id ? "vous" : noms[c.caree_par] || "?") : null,
+    careeLe: c.caree_le,
     annulee: !!c.annulee,
-    client: visible ? { nom: c.client_nom, telephone: c.client_tel, telephone2: c.telephone2 } : null,
+    client: { nom: c.client_nom, telephone: c.client_tel, telephone2: c.telephone2 },
   };
 }
 
@@ -342,9 +360,20 @@ export async function routePartenaires(request, env, url) {
     return json({ ok: true, debut, fin, courses: (results || []).map((c) => vueCourse(c, moi, noms)) });
   }
 
-  const action = sousChemin.match(/^\/courses\/(\d+)\/(prendre|liberer|annuler)$/);
+  const action = sousChemin.match(/^\/courses\/(\d+)\/(caree|prendre|liberer|annuler)$/);
   if (action && methode === "POST") {
     const id = Number(action[1]);
+    // « Mise dans Caree » : bascule ; n'importe quel partenaire.
+    if (action[2] === "caree") {
+      const c = await env.DB.prepare("SELECT caree_par FROM courses WHERE id = ?").bind(id).first();
+      if (!c) return json({ ok: false, error: "Course introuvable." }, 404);
+      if (c.caree_par == null) {
+        await env.DB.prepare("UPDATE courses SET caree_par = ?, caree_le = datetime('now') WHERE id = ? AND caree_par IS NULL").bind(moi.id, id).run();
+      } else {
+        await env.DB.prepare("UPDATE courses SET caree_par = NULL, caree_le = NULL WHERE id = ?").bind(id).run();
+      }
+      return json({ ok: true });
+    }
     if (action[2] === "prendre") {
       const r = await env.DB.prepare("UPDATE courses SET prise_par = ?, prise_le = datetime('now') WHERE id = ? AND prise_par IS NULL AND annulee = 0")
         .bind(moi.id, id).run();
@@ -356,7 +385,7 @@ export async function routePartenaires(request, env, url) {
         .bind(...(moi.admin ? [id] : [id, moi.id])).run();
       if (!r.meta || !r.meta.changes) return json({ ok: false, error: "Vous ne pouvez pas libérer cette course." }, 403);
       const c = await env.DB.prepare("SELECT date, heure_pc, depart, destination FROM courses WHERE id = ?").bind(id).first();
-      if (c) await prevenirPartenaires(env, { date: c.date, heure: c.heure_pc, depart: c.depart, destination: c.destination }, moi.id);
+      if (c) await prevenirPartenaires(env, { date: c.date, heure: c.heure_pc, depart: c.depart, destination: c.destination });
       return json({ ok: true });
     }
     if (!moi.admin) return json({ ok: false, error: "Réservé à l'administrateur." }, 403);
@@ -392,7 +421,7 @@ export async function routePartenaires(request, env, url) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ads', ?, ?, ${c.garder ? "datetime('now')" : "NULL"})`
     ).bind(c.date, c.heurePc, c.heureRdv, c.type, c.depart, c.destination, c.nom || null, c.telephone || null, c.commentaire || null,
       moi.id, c.garder ? moi.id : null).run();
-    if (!c.garder) await prevenirPartenaires(env, { date: c.date, heure: c.heurePc, depart: c.depart, destination: c.destination }, moi.id);
+    if (!c.garder) await prevenirPartenaires(env, { date: c.date, heure: c.heurePc, depart: c.depart, destination: c.destination });
     return json({ ok: true, id: r.meta && r.meta.last_row_id });
   }
 
@@ -400,7 +429,7 @@ export async function routePartenaires(request, env, url) {
   if (sousChemin === "/bilan" && methode === "GET") {
     const mois = /^\d{4}-\d{2}$/.test(url.searchParams.get("mois") || "") ? url.searchParams.get("mois") : aujourdhuiParis().slice(0, 7);
     const { results: courses } = await env.DB.prepare(
-      "SELECT prise_par, ajoutee_par FROM courses WHERE date LIKE ? AND annulee = 0"
+      "SELECT prise_par, ajoutee_par, caree_par FROM courses WHERE date LIKE ? AND annulee = 0"
     ).bind(mois + "-%").all();
     const { results: parts } = await env.DB.prepare("SELECT id, nom, actif FROM partenaires ORDER BY id").all();
     const { results: budgets } = await env.DB.prepare("SELECT partenaire_id, montant, paye FROM budget WHERE mois = ?").bind(mois).all();
@@ -427,6 +456,7 @@ export async function routePartenaires(request, env, url) {
       total,
       parTelephone: liste.filter((c) => c.ajoutee_par != null).length,
       nonPrises: liste.filter((c) => c.prise_par == null).length,
+      pasDansCaree: liste.filter((c) => c.caree_par == null).length,
       depense: montant,
       coutParCourse: montant != null && total ? Math.round((montant / total) * 100) / 100 : null,
       partenaires: parPartenaire,
@@ -522,6 +552,18 @@ export async function routePartenaires(request, env, url) {
   if (saisie && methode === "POST") {
     await env.DB.prepare("UPDATE mes_courses SET saisie = 1 - saisie WHERE id = ?").bind(Number(saisie[1])).run();
     return json({ ok: true });
+  }
+
+  // Ligne de permanence : seul numero qui recoit les SMS des reservations.
+  if (sousChemin === "/admin/sms" && methode === "GET") {
+    return json({ ok: true, numero: await numeroPermanence(env.DB) });
+  }
+  if (sousChemin === "/admin/sms" && methode === "POST") {
+    const b = await lireCorps(request);
+    const numero = texte(b.numero, 30);
+    await env.DB.prepare("INSERT INTO reglages (cle, valeur) VALUES ('sms_permanence', ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur")
+      .bind(numero || null).run();
+    return json({ ok: true, numero });
   }
 
   if (sousChemin === "/admin/clients" && methode === "GET") {
