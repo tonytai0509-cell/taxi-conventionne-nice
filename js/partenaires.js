@@ -777,7 +777,20 @@
         });
         ligne.appendChild(joindre);
         ligne.appendChild(fichier);
-        if (p.factureId) ligne.appendChild(lienFacture(p.factureId));
+        if (p.factureId) {
+          ligne.appendChild(lienFacture(p.factureId));
+          var suppr = el("button", "p-suppr", "🗑");
+          suppr.type = "button";
+          suppr.setAttribute("aria-label", "Supprimer la facture de " + p.nom);
+          suppr.title = "Supprimer la facture";
+          suppr.addEventListener("click", function () {
+            if (!confirm("Supprimer la facture de " + p.nom + " pour " + titreMois(moisBudget) + " ? Le montant et le statut restent.")) return;
+            suppr.disabled = true;
+            api("POST", "/admin/factures/" + p.factureId + "/supprimer").then(function () { message("Facture supprimée."); chargerBudget(); })
+              .catch(function (e) { message(e.message); chargerBudget(); });
+          });
+          ligne.appendChild(suppr);
+        }
         det.appendChild(ligne);
         d.appendChild(det);
         zone.appendChild(d);
