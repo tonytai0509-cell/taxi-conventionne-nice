@@ -389,6 +389,18 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
   margin-bottom: 14px;
 }
 
+/* Telephone : tout en haut, le cadre « Taxi conventionne CPAM a Nice » doit
+   tenir entier au-dessus de la barre Appeler / Reserver. La photo prend la
+   hauteur restante (environ 400px : en-tete, titre et barre du bas). */
+@media (max-width: 699px) {
+  .hero-photo {
+    height: calc(100vh - 400px);
+    height: calc(100svh - 400px);
+    min-height: 250px;
+  }
+  .hero-photo img { object-position: center 72%; }
+}
+
 @media (min-width: 700px) {
   .hero-photo { height: 46vh; }
   .hero-photo img { object-position: 62% 38%; }
