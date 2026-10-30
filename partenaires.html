@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261030" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261031" />
 </head>
 <body>
   <header class="p-haut">
@@ -32,6 +32,7 @@
       <button data-onglet="jour" class="actif">Jour</button>
       <button data-onglet="semaine">Semaine</button>
       <button data-onglet="bilan">Bilan</button>
+      <button data-onglet="mes" id="pOngletMes" hidden>Mes courses</button>
       <button data-onglet="gestion" id="pOngletGestion" hidden>Gestion</button>
     </nav>
 
@@ -54,6 +55,17 @@
         <button id="pMoisApres" aria-label="Mois suivant">›</button>
       </div>
       <div id="pBilan"></div>
+    </section>
+
+    <section id="vMes" hidden>
+      <div class="p-nav-jour">
+        <button id="pMesAvant" aria-label="Semaine précédente">‹</button>
+        <div id="pMesTitre"></div>
+        <button id="pMesApres" aria-label="Semaine suivante">›</button>
+      </div>
+      <p class="p-petit p-marge">Vos réservations du site (QR code, cartes, site, vos clients). Cochez-les au fur et à mesure que vous les saisissez dans l'appli. Effacées 30 jours après la course.</p>
+      <div id="pListeMes"></div>
+      <button class="p-bouton p-bouton-marge" id="pMesCopier" type="button">📋 Copier la semaine en texte</button>
     </section>
 
     <section id="vGestion" hidden>
@@ -112,8 +124,8 @@
       </div>
       <label>Commentaire</label>
       <input name="commentaire" maxlength="500" placeholder="Fauteuil, bon de transport au retour…" />
-      <label>Qui la fait ?</label>
-      <div class="p-choix">
+      <label id="pQuiLabel">Qui la fait ?</label>
+      <div class="p-choix" id="pQuiChoix">
         <label><input type="radio" name="garder" value="" checked /><span>Libre (aux partenaires)</span></label>
         <label><input type="radio" name="garder" value="1" /><span>Je la garde</span></label>
       </div>
@@ -124,6 +136,6 @@
   </div>
 
   <div class="p-message" id="pMessage" hidden></div>
-  <script src="/js/partenaires.js?v=20261030"></script>
+  <script src="/js/partenaires.js?v=20261031"></script>
 </body>
 </html>

@@ -36,6 +36,8 @@ main { max-width: 620px; margin: 0 auto; }
 
 .p-onglets { display: flex; gap: 6px; margin: 14px 16px 0; background: #e8e2d3; border-radius: 12px; padding: 4px; }
 .p-onglets button { flex: 1; border: 0; background: none; padding: 9px 0; border-radius: 9px; font-weight: 800; font-size: 13.5px; color: var(--nuit); cursor: pointer; }
+.p-onglets.cinq { gap: 2px; }
+.p-onglets.cinq button { font-size: 12px; padding: 9px 2px; }
 .p-onglets button.actif { background: var(--nuit); color: #fff; }
 
 .p-ajouter { display: block; width: calc(100% - 32px); margin: 14px 16px 2px; background: var(--or); color: var(--nuit); border: 0; font-weight: 800; border-radius: 14px; padding: 14px; font-size: 14.5px; cursor: pointer; }
@@ -114,3 +116,8 @@ textarea { resize: vertical; }
 .p-fenetre h3 { margin: 0; color: var(--nuit); font-size: 19px; }
 .p-message { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--nuit); color: #fff; padding: 11px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 30; max-width: 92vw; text-align: center; }
 .p-marge { margin: 0 18px 8px; }
+.p-origine { margin-left: auto; font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 4px 8px; background: #f1f1f1; color: #444; }
+.p-carte.saisie { opacity: .55; }
+.p-saisie { margin-top: 10px; border: 1.5px solid var(--trait); background: #fff; color: var(--nuit); font-weight: 800; border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+.p-carte.saisie .p-saisie { border-color: var(--vert); color: var(--vert); }
+.p-bouton-marge { width: calc(100% - 32px); margin: 14px 16px; }

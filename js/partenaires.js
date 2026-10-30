@@ -9,6 +9,8 @@
   var jour = isoAujourdhui();
   var mois = jour.slice(0, 7);
   var moisBudget = mois;
+  var semaineMes = isoAujourdhui();
+  var mesCourses = [];
 
   function $(id) { return document.getElementById(id); }
 
@@ -182,6 +184,89 @@
     }).catch(function () {});
   }
 
+  // ----- Mes courses (administrateur) : recap des reservations de Tony -----
+  var ORIGINES = { qr: "🔳 QR CODE", site: "🌐 SITE", client_tony: "⭐ VOTRE CLIENT", ads: "🎯 GOOGLE ADS" };
+
+  function heureMa(c) {
+    if (c.pcADefinir) return "PC à définir";
+    return heure(c.heurePc) || "RDV " + heure(c.heureRdv);
+  }
+
+  function carteMaCourse(c) {
+    var carte = el("div", "p-carte" + (c.saisie ? " saisie" : ""));
+    var l1 = el("div", "p-l1");
+    l1.appendChild(el("span", "p-heure", heureMa(c)));
+    l1.appendChild(el("span", "p-type", c.type === "prive" ? "Course privée" : "Transport médical"));
+    l1.appendChild(el("span", "p-origine", ORIGINES[c.origine] || "🌐 SITE"));
+    carte.appendChild(l1);
+    var adr = el("div", "p-adr");
+    adr.appendChild(document.createTextNode("📍 "));
+    adr.appendChild(el("b", null, c.depart));
+    adr.appendChild(document.createElement("br"));
+    adr.appendChild(document.createTextNode("🏁 "));
+    adr.appendChild(el("b", null, c.destination));
+    if (c.heureRdv && (c.heurePc || c.pcADefinir)) adr.appendChild(document.createTextNode(" · RDV " + heure(c.heureRdv)));
+    carte.appendChild(adr);
+    var cl = el("div", "p-client");
+    cl.appendChild(document.createTextNode("👤 " + (c.client.nom || "Client") + " "));
+    [c.client.telephone, c.client.telephone2].filter(Boolean).forEach(function (t) {
+      cl.appendChild(document.createTextNode("· 📞 "));
+      var a = el("a", null, t);
+      a.href = "tel:" + t.replace(/[^0-9+]/g, "");
+      cl.appendChild(a);
+      cl.appendChild(document.createTextNode(" "));
+    });
+    carte.appendChild(cl);
+    var infos = [c.options, c.reservePar ? "Réservé par " + c.reservePar : "", c.commentaire ? "💬 " + c.commentaire : ""].filter(Boolean).join(" · ");
+    if (infos) carte.appendChild(el("div", "p-info", infos));
+    var b = el("button", "p-saisie", c.saisie ? "✓ Saisie dans l'appli" : "☐ Pas encore saisie");
+    b.addEventListener("click", function () {
+      api("POST", "/admin/mes-courses/" + c.id + "/saisie").then(chargerMes).catch(function (e) { message(e.message); });
+    });
+    carte.appendChild(b);
+    return carte;
+  }
+
+  function chargerMes() {
+    var fin = decaler(semaineMes, 6);
+    var d1 = new Date(semaineMes + "T12:00:00"), d2 = new Date(fin + "T12:00:00");
+    $("pMesTitre").textContent = "Du " + d1.getDate() + " " + MOIS[d1.getMonth()] + " au " + d2.getDate() + " " + MOIS[d2.getMonth()];
+    var liste = $("pListeMes");
+    api("GET", "/admin/mes-courses?debut=" + semaineMes + "&fin=" + fin).then(function (r) {
+      mesCourses = r.courses;
+      liste.textContent = "";
+      $("pMesCopier").hidden = !r.courses.length;
+      if (!r.courses.length) { liste.appendChild(el("div", "p-vide", "Aucune réservation du site sur ces 7 jours.")); return; }
+      var dateCourante = null;
+      r.courses.forEach(function (c) {
+        if (c.date !== dateCourante) {
+          dateCourante = c.date;
+          var n = r.courses.filter(function (x) { return x.date === c.date; }).length;
+          liste.appendChild(el("div", "p-titre-jour", titreJour(c.date) + " · " + n + " course" + (n > 1 ? "s" : "")));
+        }
+        liste.appendChild(carteMaCourse(c));
+      });
+    }).catch(function () {});
+  }
+
+  function texteMes() {
+    var lignes = [], dateCourante = null;
+    mesCourses.forEach(function (c) {
+      if (c.date !== dateCourante) {
+        dateCourante = c.date;
+        if (lignes.length) lignes.push("");
+        lignes.push(titreJour(c.date).toUpperCase());
+      }
+      lignes.push("- " + heureMa(c) + (c.heureRdv && (c.heurePc || c.pcADefinir) ? " (RDV " + heure(c.heureRdv) + ")" : "") +
+        " · " + (c.type === "prive" ? "Privée" : "Médical") + " · " + (c.client.nom || "Client") +
+        [c.client.telephone, c.client.telephone2].filter(Boolean).map(function (t) { return " " + t; }).join(""));
+      lignes.push("  " + c.depart + " → " + c.destination);
+      var infos = [c.options, c.reservePar ? "Réservé par " + c.reservePar : "", c.commentaire].filter(Boolean).join(" · ");
+      if (infos) lignes.push("  " + infos);
+    });
+    return lignes.join("\n");
+  }
+
   // ----- Vue Bilan -----
   function chiffre(v, t) {
     var c = el("div", "p-chiffre");
@@ -330,12 +415,13 @@
     if (vueActive === "jour") chargerJour();
     if (vueActive === "semaine") chargerSemaine();
     if (vueActive === "bilan") chargerBilan();
+    if (vueActive === "mes") chargerMes();
     if (vueActive === "gestion") { chargerPartenaires(); chargerBudget(); }
   }
 
   function changerVue(v) {
     vueActive = v;
-    ["jour", "semaine", "bilan", "gestion"].forEach(function (x) {
+    ["jour", "semaine", "bilan", "mes", "gestion"].forEach(function (x) {
       $("v" + x.charAt(0).toUpperCase() + x.slice(1)).hidden = x !== v;
     });
     Array.prototype.forEach.call($("pOnglets").querySelectorAll("button"), function (b) {
@@ -353,6 +439,12 @@
     $("pJourApres").addEventListener("click", function () { jour = decaler(jour, 1); chargerJour(); });
     $("pMoisAvant").addEventListener("click", function () { mois = decalerMois(mois, -1); chargerBilan(); });
     $("pMoisApres").addEventListener("click", function () { mois = decalerMois(mois, 1); chargerBilan(); });
+    $("pMesAvant").addEventListener("click", function () { semaineMes = decaler(semaineMes, -7); chargerMes(); });
+    $("pMesApres").addEventListener("click", function () { semaineMes = decaler(semaineMes, 7); chargerMes(); });
+    $("pMesCopier").addEventListener("click", function () {
+      var t = texteMes();
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { message("Récap copié."); }, function () { prompt("Copiez le récap :", t); });
+    });
     $("pBudgetAvant").addEventListener("click", function () { moisBudget = decalerMois(moisBudget, -1); chargerBudget(); });
     $("pBudgetApres").addEventListener("click", function () { moisBudget = decalerMois(moisBudget, 1); chargerBudget(); });
 
@@ -377,7 +469,7 @@
         type: form.querySelector("input[name=type]:checked").value,
         nom: f.nom.value, telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
         date: f.date.value, heurePc: f.heurePc.value, heureRdv: f.heureRdv.value, commentaire: f.commentaire.value,
-        garder: !!form.querySelector("input[name=garder]:checked").value,
+        garder: moi.admin && !!form.querySelector("input[name=garder]:checked").value,
       }).then(function () {
         fenetre.hidden = true;
         jour = f.date.value;
@@ -436,6 +528,12 @@
       $("pQui").appendChild(sortir);
       $("pBoutonAjouter").hidden = !moi.peutAjouter;
       $("pOngletGestion").hidden = !moi.admin;
+      $("pOngletMes").hidden = !moi.admin;
+      if (moi.admin) $("pOnglets").classList.add("cinq");
+      // « Je la garde » : administrateur seul. Un partenaire qui ajoute une
+      // course la met forcement au dispatch.
+      $("pQuiLabel").hidden = !moi.admin;
+      $("pQuiChoix").hidden = !moi.admin;
       brancher();
       changerVue("jour");
     })

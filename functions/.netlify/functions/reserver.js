@@ -28,7 +28,7 @@
 // "TEL :", etc. via un champ comme le nom ou la destination) et le tronque
 // a une longueur raisonnable.
 import { relaisConfigure, lienConfirmationSms } from "../../confirmerSms.js";
-import { origineReservation, ajouterReservationAds } from "../../partenaires.js";
+import { origineReservation, ajouterReservationAds, ajouterMaCourse } from "../../partenaires.js";
 
 function nettoyerTexte(valeur, longueurMax) {
   if (typeof valeur !== "string") return "";
@@ -541,6 +541,10 @@ export async function onRequestPost(context) {
   let versPartenaires = null;
   if (donnees.origine === "ads") {
     versPartenaires = await ajouterReservationAds(env, donnees, reference).catch((e) => ({ ok: false, raison: String(e && e.message) }));
+  }
+  if (!(versPartenaires && versPartenaires.ok)) {
+    // Course de Tony : recap dans l'onglet « Mes courses » de son espace.
+    await ajouterMaCourse(env, donnees, reference).catch(() => null);
   }
 
   const [resultatAgenda, resultatEmail] = await Promise.all([

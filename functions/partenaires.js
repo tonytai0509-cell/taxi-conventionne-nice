@@ -13,7 +13,8 @@
 //
 // Donnees de sante : nom et telephone du client ne sont montres qu'au
 // chauffeur qui a pris la course (et a l'admin), et effaces 30 jours apres
-// la date de la course.
+// la date de la course. Le recap « Mes courses » (admin seul) est efface
+// entierement au meme delai.
 
 const COOKIE = "partenaire";
 const DUREE_COOKIE_S = 365 * 24 * 3600;
@@ -61,6 +62,29 @@ const SCHEMA = [
      PRIMARY KEY (mois, partenaire_id)
    )`,
   `CREATE TABLE IF NOT EXISTS depenses (mois TEXT PRIMARY KEY, montant REAL NOT NULL DEFAULT 0)`,
+  // Reservations du site qui reviennent a Tony (QR code, site, ses clients) :
+  // recap dans l'onglet « Mes courses », visible par l'administrateur seul.
+  `CREATE TABLE IF NOT EXISTS mes_courses (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     reference TEXT,
+     date TEXT NOT NULL,
+     heure_pc TEXT,
+     heure_rdv TEXT,
+     pc_a_definir INTEGER NOT NULL DEFAULT 0,
+     type TEXT NOT NULL DEFAULT 'medical',
+     origine TEXT NOT NULL DEFAULT 'site',
+     depart TEXT NOT NULL,
+     destination TEXT NOT NULL,
+     client_nom TEXT,
+     client_tel TEXT,
+     telephone2 TEXT,
+     reserve_par TEXT,
+     commentaire TEXT,
+     options TEXT,
+     saisie INTEGER NOT NULL DEFAULT 0,
+     cree_le TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  `CREATE INDEX IF NOT EXISTS idx_mes_courses_date ON mes_courses (date)`,
 ];
 
 let schemaPret = false;
@@ -173,6 +197,22 @@ export async function ajouterReservationAds(env, d, reference) {
   return { ok: true, id: r.meta && r.meta.last_row_id };
 }
 
+// Reservation du site qui revient a Tony : gardee pour son recap « Mes courses ».
+export async function ajouterMaCourse(env, d, reference) {
+  if (!partenairesActifs(env)) return { ok: false };
+  await preparer(env.DB);
+  const options = [d.accompagnant ? "Accompagnant" : "", d.btoRetour ? "Bon de transport au retour" : ""].filter(Boolean).join(", ");
+  const reservePar = d.reservePar ? d.reservePar + (d.telReservant ? " - " + d.telReservant : "") : null;
+  await env.DB.prepare(
+    `INSERT INTO mes_courses (reference, date, heure_pc, heure_rdv, pc_a_definir, type, origine, depart, destination, client_nom, client_tel, telephone2, reserve_par, commentaire, options)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(reference, d.date, d.pcADefinir ? null : d.heurePc || null, d.heureRdv || null, d.pcADefinir ? 1 : 0, d.type, d.origine || "site",
+      d.priseEnCharge, d.destination, d.nom, d.telephone, d.telephone2 || null, reservePar, d.commentaire || null, options || null)
+    .run();
+  return { ok: true };
+}
+
 function versInternational(numero) {
   const brut = String(numero || "").replace(/[^0-9+]/g, "");
   if (brut.startsWith("+")) return brut;
@@ -250,9 +290,11 @@ export async function routePartenaires(request, env, url) {
 
   // Purge des coordonnees des clients une fois la course passee.
   if (Math.random() < 0.05) {
+    const limite = decalerJours(aujourdhuiParis(), -JOURS_CONSERVATION_CLIENT);
     await env.DB.prepare("UPDATE courses SET client_nom = NULL, client_tel = NULL, telephone2 = NULL WHERE date < ? AND client_nom IS NOT NULL")
-      .bind(decalerJours(aujourdhuiParis(), -JOURS_CONSERVATION_CLIENT))
+      .bind(limite)
       .run();
+    await env.DB.prepare("DELETE FROM mes_courses WHERE date < ?").bind(limite).run();
   }
 
   // Entree par lien personnel : pose le cookie et ouvre la page.
@@ -338,7 +380,9 @@ export async function routePartenaires(request, env, url) {
       nom: texte(b.nom, 120),
       telephone: texte(b.telephone, 30),
       commentaire: texte(b.commentaire, 500),
-      garder: !!b.garder,
+      // Seul l'administrateur peut garder une course : un partenaire qui en
+      // ajoute une la met forcement au dispatch.
+      garder: !!b.garder && moi.admin,
     };
     if (!c.date || !c.depart || !c.destination || (!c.heurePc && !c.heureRdv)) {
       return json({ ok: false, error: "Date, heure, départ et destination sont obligatoires." }, 400);
@@ -439,6 +483,44 @@ export async function routePartenaires(request, env, url) {
          ON CONFLICT (mois, partenaire_id) DO UPDATE SET montant = excluded.montant, paye = excluded.paye`
       ).bind(mois, Number(b.partenaireId), Number.isFinite(m) && m >= 0 ? m : 0, b.paye ? 1 : 0).run();
     }
+    return json({ ok: true });
+  }
+
+  // Recap des courses de Tony (onglet « Mes courses »).
+  if (sousChemin === "/admin/mes-courses" && methode === "GET") {
+    const debut = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("debut") || "") ? url.searchParams.get("debut") : aujourdhuiParis();
+    let fin = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("fin") || "") ? url.searchParams.get("fin") : decalerJours(debut, 6);
+    if (fin < debut) fin = debut;
+    if (fin > decalerJours(debut, 62)) fin = decalerJours(debut, 62);
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM mes_courses WHERE date >= ? AND date <= ? ORDER BY date, COALESCE(heure_pc, heure_rdv), id"
+    ).bind(debut, fin).all();
+    return json({
+      ok: true,
+      debut,
+      fin,
+      courses: (results || []).map((c) => ({
+        id: c.id,
+        date: c.date,
+        heurePc: c.heure_pc,
+        heureRdv: c.heure_rdv,
+        pcADefinir: !!c.pc_a_definir,
+        type: c.type,
+        origine: c.origine,
+        depart: c.depart,
+        destination: c.destination,
+        client: { nom: c.client_nom, telephone: c.client_tel, telephone2: c.telephone2 },
+        reservePar: c.reserve_par,
+        commentaire: c.commentaire,
+        options: c.options,
+        saisie: !!c.saisie,
+      })),
+    });
+  }
+
+  const saisie = sousChemin.match(/^\/admin\/mes-courses\/(\d+)\/saisie$/);
+  if (saisie && methode === "POST") {
+    await env.DB.prepare("UPDATE mes_courses SET saisie = 1 - saisie WHERE id = ?").bind(Number(saisie[1])).run();
     return json({ ok: true });
   }
 
