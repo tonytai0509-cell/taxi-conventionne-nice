@@ -203,6 +203,10 @@
           </div>
           <label for="fTel">Téléphone</label>
           <input id="fTel" name="telephone" type="tel" inputmode="tel" placeholder="06 …" maxlength="30" autocomplete="off" />
+          <label for="fNir">N° de sécurité sociale <span class="p-optionnel">(facultatif)</span></label>
+          <input id="fNir" name="nir" type="text" inputmode="numeric" placeholder="1 85 05 78 006 084 36" maxlength="21" autocomplete="off" />
+          <label for="fNaissance">Date de naissance <span class="p-optionnel">(facultatif)</span></label>
+          <input id="fNaissance" name="naissance" type="date" min="1900-01-01" autocomplete="off" />
         </fieldset>
 
         <fieldset class="p-carte-form">
@@ -233,6 +237,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261114"></script>
+  <script src="/js/partenaires.js?v=20261115"></script>
 </body>
 </html>

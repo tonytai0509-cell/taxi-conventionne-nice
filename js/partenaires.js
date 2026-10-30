@@ -190,9 +190,21 @@
         cl.appendChild(a);
         cl.appendChild(document.createTextNode(" "));
       });
+      if (c.client.nir || c.client.naissance) {
+        var sante = el("div", "p-client-sante");
+        if (c.client.nir) sante.appendChild(el("span", null, "🪪 " + formaterNir(c.client.nir)));
+        if (c.client.naissance) sante.appendChild(el("span", null, "🎂 " + c.client.naissance.split("-").reverse().join("/")));
+        cl.appendChild(sante);
+      }
       carte.appendChild(cl);
     }
     return carte;
+  }
+
+  // « 185057800608436 » -> « 1 85 05 78 006 084 36 »
+  function formaterNir(n) {
+    var c = String(n || "").toUpperCase().replace(/[^0-9AB]/g, "").slice(0, 15);
+    return [c.slice(0, 1), c.slice(1, 3), c.slice(3, 5), c.slice(5, 7), c.slice(7, 10), c.slice(10, 13), c.slice(13, 15)].filter(Boolean).join(" ");
   }
 
   // ----- Vue Jour -----
@@ -1051,6 +1063,7 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !fenetre.hidden) fermerFeuille(); });
     activerSuggestions(form.elements.depart);
     activerSuggestions(form.elements.destination);
+    form.elements.nir.addEventListener("input", function () { this.value = formaterNir(this.value); });
     activerHeure(form.elements.heurePc);
     activerHeure(form.elements.heureRdv);
     function erreurForm(texte, champ) {
@@ -1080,6 +1093,7 @@
       api("POST", "/courses", {
         type: form.querySelector("input[name=type]:checked").value,
         nom: [f.prenom.value.trim(), f.nom.value.trim()].filter(Boolean).join(" "), telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
+        nir: f.nir.value, naissance: f.naissance.value,
         date: f.date.value, heurePc: hPc ? hPc.replace("h", ":") : "", heureRdv: hRdv ? hRdv.replace("h", ":") : "", commentaire: f.commentaire.value,
       }).then(function () {
         fermerFeuille();

@@ -395,3 +395,4 @@ body.p-feuille-ouverte { overflow: hidden; }
 .p-aide { display: flex; align-items: center; gap: 8px; margin: 8px 18px 12px; font-size: 12.5px; color: var(--doux); }
 .p-aide svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
 .p-aide-bas { border-top: 1px solid #ece6d8; margin-top: 12px; padding-top: 12px; }
+.p-client-sante { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; font-weight: 600; font-size: 13px; color: var(--nuit); }

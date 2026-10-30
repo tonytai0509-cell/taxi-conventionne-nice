@@ -111,6 +111,9 @@ const COLONNES = [
   // Cle du lien personnel gardee (partenaires seulement, jamais l'admin) pour
   // pouvoir renvoyer le lien a un chauffeur qui l'a perdu.
   "ALTER TABLE partenaires ADD COLUMN cle TEXT",
+  // Numero de securite sociale et date de naissance (facultatifs), chiffres.
+  "ALTER TABLE courses ADD COLUMN nir_chiffre TEXT",
+  "ALTER TABLE courses ADD COLUMN naissance_chiffre TEXT",
 ];
 
 let schemaPret = false;
@@ -240,6 +243,65 @@ export async function ajouterMaCourse(env, d, reference) {
   return { ok: true };
 }
 
+// ---------------------------------------------------------------------------
+// Numero de securite sociale / date de naissance : chiffres (AES-GCM) avec une
+// cle derivee du secret PARTENAIRES_CLE_ADMIN, effaces avec le reste des
+// coordonnees du client 30 jours apres la course. Jamais dans les SMS ni mails.
+// ---------------------------------------------------------------------------
+
+async function cleSante(env) {
+  if (!env.PARTENAIRES_CLE_ADMIN) return null;
+  const brut = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("donnees-sante:" + env.PARTENAIRES_CLE_ADMIN));
+  return crypto.subtle.importKey("raw", brut, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+async function chiffrer(env, texteClair) {
+  if (!texteClair) return null;
+  const cle = await cleSante(env);
+  if (!cle) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cle, new TextEncoder().encode(texteClair)));
+  const tout = new Uint8Array(iv.length + ct.length);
+  tout.set(iv);
+  tout.set(ct, iv.length);
+  let s = "";
+  for (const o of tout) s += String.fromCharCode(o);
+  return btoa(s);
+}
+
+async function dechiffrer(env, b64) {
+  if (!b64) return null;
+  try {
+    const cle = await cleSante(env);
+    if (!cle) return null;
+    const tout = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const clair = await crypto.subtle.decrypt({ name: "AES-GCM", iv: tout.slice(0, 12) }, cle, tout.slice(12));
+    return new TextDecoder().decode(clair);
+  } catch (e) {
+    return null; // cle admin changee depuis : donnee illisible
+  }
+}
+
+// NIR : 13 caracteres (2A/2B pour la Corse) + cle facultative de 2 chiffres.
+function lireNir(v) {
+  const n = String(v || "").toUpperCase().replace(/[\s.\-]/g, "");
+  if (!n) return "";
+  const m = n.match(/^([12378]\d{4}(?:\d{2}|2A|2B)\d{6})(\d{2})?$/);
+  if (!m) return null;
+  if (m[2]) {
+    const corps = Number(m[1].replace("2A", "19").replace("2B", "18"));
+    if (97 - (corps % 97) !== Number(m[2])) return null;
+  }
+  return n;
+}
+
+async function ajouterSante(env, vue, c) {
+  if (!c.nir_chiffre && !c.naissance_chiffre) return vue;
+  vue.client.nir = await dechiffrer(env, c.nir_chiffre);
+  vue.client.naissance = await dechiffrer(env, c.naissance_chiffre);
+  return vue;
+}
+
 function versInternational(numero) {
   const brut = String(numero || "").replace(/[^0-9+]/g, "");
   if (brut.startsWith("+")) return brut;
@@ -324,7 +386,7 @@ export async function routePartenaires(request, env, url) {
   // Purge des coordonnees des clients une fois la course passee.
   if (Math.random() < 0.05) {
     const limite = decalerJours(aujourdhuiParis(), -JOURS_CONSERVATION_CLIENT);
-    await env.DB.prepare("UPDATE courses SET client_nom = NULL, client_tel = NULL, telephone2 = NULL WHERE date < ? AND client_nom IS NOT NULL")
+    await env.DB.prepare("UPDATE courses SET client_nom = NULL, client_tel = NULL, telephone2 = NULL, nir_chiffre = NULL, naissance_chiffre = NULL WHERE date < ? AND (client_nom IS NOT NULL OR nir_chiffre IS NOT NULL OR naissance_chiffre IS NOT NULL)")
       .bind(limite)
       .run();
     await env.DB.prepare("DELETE FROM mes_courses WHERE date < ?").bind(limite).run();
@@ -372,7 +434,8 @@ export async function routePartenaires(request, env, url) {
       "SELECT * FROM courses WHERE cree_le >= datetime('now', '-2 days') AND annulee = 0 ORDER BY cree_le DESC, id DESC"
     ).all();
     const noms = await nomsPartenaires(env.DB);
-    const recues = (results || []).filter((c) => jourParis(c.cree_le) === auj).map((c) => ({ ...vueCourse(c, moi, noms), recueLe: c.cree_le }));
+    const recues = await Promise.all((results || []).filter((c) => jourParis(c.cree_le) === auj)
+      .map((c) => ajouterSante(env, { ...vueCourse(c, moi, noms), recueLe: c.cree_le }, c)));
     const hier = (results || []).filter((c) => jourParis(c.cree_le) === decalerJours(auj, -1)).length;
     const prevues = await env.DB.prepare("SELECT COUNT(*) AS n FROM courses WHERE date = ? AND annulee = 0").bind(auj).first();
     return json({ ok: true, jour: auj, recues, recuesHier: hier, prevues: prevues ? prevues.n : 0 });
@@ -387,7 +450,8 @@ export async function routePartenaires(request, env, url) {
       "SELECT * FROM courses WHERE date >= ? AND date <= ? ORDER BY date, COALESCE(heure_pc, heure_rdv), id"
     ).bind(debut, fin).all();
     const noms = await nomsPartenaires(env.DB);
-    return json({ ok: true, debut, fin, courses: (results || []).map((c) => vueCourse(c, moi, noms)) });
+    const courses = await Promise.all((results || []).map((c) => ajouterSante(env, vueCourse(c, moi, noms), c)));
+    return json({ ok: true, debut, fin, courses });
   }
 
   const action = sousChemin.match(/^\/courses\/(\d+)\/(caree|prendre|liberer|annuler)$/);
@@ -439,17 +503,21 @@ export async function routePartenaires(request, env, url) {
       nom: texte(b.nom, 120),
       telephone: texte(b.telephone, 30),
       commentaire: texte(b.commentaire, 500),
+      nir: lireNir(b.nir),
+      naissance: /^\d{4}-\d{2}-\d{2}$/.test(b.naissance || "") && b.naissance >= "1900-01-01" && b.naissance <= aujourdhuiParis() ? b.naissance : "",
       // Plus de « Je la garde » : toute course ajoutee part au dispatch (Caree).
       garder: false,
     };
     if (!c.date || !c.depart || !c.destination || (!c.heurePc && !c.heureRdv)) {
       return json({ ok: false, error: "Date, heure, départ et destination sont obligatoires." }, 400);
     }
+    if (c.nir === null) return json({ ok: false, error: "Numéro de sécurité sociale invalide : vérifiez les 13 chiffres et la clé." }, 400);
+    if (b.naissance && !c.naissance) return json({ ok: false, error: "Date de naissance invalide." }, 400);
     const r = await env.DB.prepare(
-      `INSERT INTO courses (date, heure_pc, heure_rdv, type, depart, destination, client_nom, client_tel, commentaire, origine, ajoutee_par, prise_par, prise_le)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ads', ?, ?, ${c.garder ? "datetime('now')" : "NULL"})`
+      `INSERT INTO courses (date, heure_pc, heure_rdv, type, depart, destination, client_nom, client_tel, commentaire, origine, ajoutee_par, prise_par, prise_le, nir_chiffre, naissance_chiffre)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ads', ?, ?, ${c.garder ? "datetime('now')" : "NULL"}, ?, ?)`
     ).bind(c.date, c.heurePc, c.heureRdv, c.type, c.depart, c.destination, c.nom || null, c.telephone || null, c.commentaire || null,
-      moi.id, c.garder ? moi.id : null).run();
+      moi.id, c.garder ? moi.id : null, await chiffrer(env, c.nir), await chiffrer(env, c.naissance)).run();
     if (!c.garder) await prevenirPartenaires(env, { date: c.date, heure: c.heurePc, depart: c.depart, destination: c.destination });
     return json({ ok: true, id: r.meta && r.meta.last_row_id });
   }
