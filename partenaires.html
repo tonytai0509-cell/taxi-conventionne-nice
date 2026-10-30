@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261103" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261104" />
 </head>
 <body>
   <header class="p-haut">
@@ -65,7 +65,17 @@
       </div>
       <p class="p-petit p-marge">Vos réservations du site (QR code, cartes, site, vos clients). Cochez-les au fur et à mesure que vous les saisissez dans l'appli. Effacées 30 jours après la course.</p>
       <div id="pListeMes"></div>
-      <button class="p-bouton p-bouton-marge" id="pMesCopier" type="button">📋 Copier la semaine en texte</button>
+      <div class="p-copier">
+        <label for="pMesFiltre">Copier le récap de la semaine</label>
+        <select id="pMesFiltre">
+          <option value="tout">Toutes les courses</option>
+          <option value="ads">Google Ads seulement</option>
+          <option value="qr">QR code / cartes seulement</option>
+          <option value="site">Site seulement</option>
+          <option value="client_tony">Vos clients seulement</option>
+        </select>
+        <button class="p-bouton" id="pMesCopier" type="button">📋 Copier en texte</button>
+      </div>
     </section>
 
     <section id="vGestion" hidden>
@@ -73,7 +83,8 @@
         <h3>SMS des réservations</h3>
         <p class="p-petit">Un seul numéro reçoit le SMS à chaque nouvelle course Google Ads : celui qui a la ligne. Changez-le quand la ligne tourne.</p>
         <p class="p-petit" id="pSmsActuel"></p>
-        <div class="p-raccourcis" id="pSmsRaccourcis"></div>
+        <select id="pSmsChauffeur" class="p-select" aria-label="Choisir le chauffeur qui a la ligne"></select>
+        <p class="p-petit">ou tapez un numéro :</p>
         <div class="p-ligne"><input id="pSmsNumero" type="tel" placeholder="06 …" maxlength="30" /><button class="p-bouton p-bouton-petit" id="pSmsOk" type="button">Enregistrer</button></div>
       </div>
       <div class="p-bloc">
@@ -138,6 +149,6 @@
   </div>
 
   <div class="p-message" id="pMessage" hidden></div>
-  <script src="/js/partenaires.js?v=20261103"></script>
+  <script src="/js/partenaires.js?v=20261104"></script>
 </body>
 </html>

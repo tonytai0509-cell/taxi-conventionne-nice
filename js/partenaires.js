@@ -11,6 +11,7 @@
   var moisBudget = mois;
   var semaineMes = isoAujourdhui();
   var mesCourses = [];
+  var adsSemaine = [];
 
   function $(id) { return document.getElementById(id); }
 
@@ -272,10 +273,17 @@
     var d1 = new Date(semaineMes + "T12:00:00"), d2 = new Date(fin + "T12:00:00");
     $("pMesTitre").textContent = "Du " + d1.getDate() + " " + MOIS[d1.getMonth()] + " au " + d2.getDate() + " " + MOIS[d2.getMonth()];
     var liste = $("pListeMes");
+    // Courses Google Ads de la meme semaine, pour le recap « Copier ».
+    adsSemaine = [];
+    api("GET", "/courses?debut=" + semaineMes + "&fin=" + fin).then(function (r) {
+      adsSemaine = r.courses.filter(function (c) { return !c.annulee; }).map(function (c) {
+        return { date: c.date, heurePc: c.heurePc, heureRdv: c.heureRdv, pcADefinir: false, type: c.type, origine: "ads",
+          depart: c.depart, destination: c.destination, client: c.client || {}, reservePar: null, commentaire: c.commentaire, options: c.options };
+      });
+    }).catch(function () {});
     api("GET", "/admin/mes-courses?debut=" + semaineMes + "&fin=" + fin).then(function (r) {
       mesCourses = r.courses;
       liste.textContent = "";
-      $("pMesCopier").hidden = !r.courses.length;
       if (!r.courses.length) { liste.appendChild(el("div", "p-vide", "Aucune réservation du site sur ces 7 jours.")); return; }
       var dateCourante = null;
       r.courses.forEach(function (c) {
@@ -289,15 +297,23 @@
     }).catch(function () {});
   }
 
-  function texteMes() {
-    var lignes = [], dateCourante = null;
-    mesCourses.forEach(function (c) {
+  var NOMS_ORIGINE = { tout: "toutes les courses", ads: "courses Google Ads", qr: "courses QR code / cartes", site: "courses du site", client_tony: "courses de vos clients" };
+
+  function texteMes(filtre) {
+    var choix = mesCourses.concat(adsSemaine).filter(function (c) { return filtre === "tout" || (c.origine || "site") === filtre; });
+    choix.sort(function (a, b) {
+      var ha = a.heurePc || a.heureRdv || "", hb = b.heurePc || b.heureRdv || "";
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : ha < hb ? -1 : ha > hb ? 1 : 0;
+    });
+    if (!choix.length) return "";
+    var lignes = ["Récap " + NOMS_ORIGINE[filtre] + " · " + $("pMesTitre").textContent.toLowerCase() + " (" + choix.length + ")"], dateCourante = null;
+    choix.forEach(function (c) {
       if (c.date !== dateCourante) {
         dateCourante = c.date;
         if (lignes.length) lignes.push("");
-        lignes.push(titreJour(c.date).toUpperCase());
+        lignes.push(titreJour(c.date).replace(/^.* · /, "").toUpperCase());
       }
-      lignes.push("- " + heureMa(c) + (c.heureRdv && (c.heurePc || c.pcADefinir) ? " (RDV " + heure(c.heureRdv) + ")" : "") +
+      lignes.push("- " + (filtre === "tout" ? "[" + (ORIGINES[c.origine] || "🌐 SITE") + "] " : "") + heureMa(c) + (c.heureRdv && (c.heurePc || c.pcADefinir) ? " (RDV " + heure(c.heureRdv) + ")" : "") +
         " · " + (c.type === "prive" ? "Privée" : "Médical") + " · " + (c.client.nom || "Client") +
         [c.client.telephone, c.client.telephone2].filter(Boolean).map(function (t) { return " " + t; }).join(""));
       lignes.push("  " + c.depart + " → " + c.destination);
@@ -407,15 +423,25 @@
     Promise.all([api("GET", "/admin/sms"), api("GET", "/admin/partenaires")]).then(function (r) {
       $("pSmsNumero").value = r[0].numero || "";
       $("pSmsActuel").textContent = r[0].numero ? "Les SMS partent actuellement au " + r[0].numero + "." : "Aucun numéro : personne ne reçoit de SMS.";
-      var zone = $("pSmsRaccourcis");
-      zone.textContent = "";
+      // Liste deroulante des chauffeurs qui ont un numero.
+      var choix = $("pSmsChauffeur");
+      choix.textContent = "";
+      var premier = el("option", null, "Choisir un chauffeur…");
+      premier.value = "";
+      choix.appendChild(premier);
       r[1].partenaires.filter(function (p) { return p.actif && p.telephone; }).forEach(function (p) {
-        var b = el("button", null, "📱 " + p.nom);
-        b.type = "button";
-        b.addEventListener("click", function () { enregistrerSms(p.telephone, p.nom); });
-        zone.appendChild(b);
+        var o = el("option", null, p.nom + " · " + p.telephone);
+        o.value = p.telephone;
+        o.setAttribute("data-nom", p.nom);
+        if (telephoneCle(p.telephone) === telephoneCle(r[0].numero)) o.selected = true;
+        choix.appendChild(o);
       });
     }).catch(function () {});
+  }
+
+  function telephoneCle(t) {
+    var c = String(t || "").replace(/\D/g, "");
+    return c.length >= 9 ? c.slice(-9) : "";
   }
 
   function enregistrerSms(numero, nom) {
@@ -492,7 +518,9 @@
     $("pMesAvant").addEventListener("click", function () { semaineMes = decaler(semaineMes, -7); chargerMes(); });
     $("pMesApres").addEventListener("click", function () { semaineMes = decaler(semaineMes, 7); chargerMes(); });
     $("pMesCopier").addEventListener("click", function () {
-      var t = texteMes();
+      var filtre = $("pMesFiltre").value;
+      var t = texteMes(filtre);
+      if (!t) { message("Rien à copier pour ce choix sur ces 7 jours."); return; }
       (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { message("Récap copié."); }, function () { prompt("Copiez le récap :", t); });
     });
     $("pBudgetAvant").addEventListener("click", function () { moisBudget = decalerMois(moisBudget, -1); chargerBudget(); });
@@ -542,6 +570,10 @@
       }).catch(function (err) { message(err.message); });
     });
     $("pSmsOk").addEventListener("click", function () { enregistrerSms($("pSmsNumero").value.trim()); });
+    $("pSmsChauffeur").addEventListener("change", function (e) {
+      var o = e.target.selectedOptions[0];
+      if (o && o.value) enregistrerSms(o.value, o.getAttribute("data-nom"));
+    });
     $("pDepenseOk").addEventListener("click", function () {
       api("POST", "/admin/budget", { mois: moisBudget, depense: Number($("pDepense").value || 0) }).then(function () { message("Dépense enregistrée."); }).catch(function (e) { message(e.message); });
     });

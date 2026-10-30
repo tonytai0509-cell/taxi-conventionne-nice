@@ -141,3 +141,7 @@ textarea { resize: vertical; }
 .p-caree.fait { border-color: var(--vert); color: var(--vert); }
 .p-raccourcis { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
 .p-raccourcis button { border: 1.5px solid var(--trait); background: #fff; border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 700; color: var(--nuit); cursor: pointer; }
+.p-copier { margin: 14px 16px; background: #fff; border-radius: 16px; padding: 14px; }
+.p-copier label { display: block; font-weight: 800; font-size: 13.5px; color: var(--nuit); margin-bottom: 8px; }
+.p-copier select, .p-select { width: 100%; background: #fff; border: 1.5px solid var(--trait); border-radius: 11px; padding: 11px 12px; font-size: 15px; color: var(--nuit); font-weight: 700; }
+.p-select { margin: 4px 0 2px; }
