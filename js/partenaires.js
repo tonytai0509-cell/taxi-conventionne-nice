@@ -227,17 +227,81 @@
     $("pJourSous").textContent = estAujourdhui ? "Aujourd'hui" : "";
     $("pJourSous").hidden = !estAujourdhui;
     var liste = $("pListeJour");
-    api("GET", "/courses?debut=" + jour).then(function (r) {
+    chargerResume();
+    return api("GET", "/courses?debut=" + jour).then(function (r) {
       liste.textContent = "";
+      var actives = r.courses.filter(function (c) { return !c.annulee; }).length;
+      $("pJourCompte").textContent = actives + " course" + (actives > 1 ? "s" : "");
+      $("pAideDetails").hidden = !r.courses.length;
       if (!r.courses.length) {
         liste.appendChild(carteVide(estAujourdhui ? "Aucune course aujourd'hui" : "Aucune course ce jour-là", "Vos courses apparaîtront ici."));
         return;
       }
-      r.courses.forEach(function (c) { liste.appendChild(ligneCourse(c)); });
+      var groupe = el("div", "p-groupe");
+      r.courses.forEach(function (c) { groupe.appendChild(ligneCourse(c)); });
+      liste.appendChild(groupe);
     }).catch(function () {});
   }
 
+  // ----- Compteurs du jour : reservations recues, courses prevues -----
+  var recuesDuJour = [];
+  function chargerResume() {
+    return api("GET", "/resume").then(function (r) {
+      recuesDuJour = r.recues;
+      $("pNbRecues").textContent = String(r.recues.length);
+      $("pNbPrevues").textContent = String(r.prevues);
+      $("pStatRecues").setAttribute("aria-label", r.recues.length + " réservations reçues aujourd'hui" + (r.recuesHier ? " (" + r.recuesHier + " hier)" : ""));
+      if (!$("pRecues").hidden) afficherRecues();
+    }).catch(function () {});
+  }
+
+  function dateCourte(iso) {
+    if (iso === isoAujourdhui()) return "Aujourd'hui";
+    if (iso === decaler(isoAujourdhui(), 1)) return "Demain";
+    var d = new Date(iso + "T12:00:00");
+    var j = JOURS[d.getDay()].slice(0, 3);
+    return j.charAt(0).toUpperCase() + j.slice(1) + ". " + d.getDate() + " " + MOIS_COURT[d.getMonth()];
+  }
+
+  function afficherRecues() {
+    var zone = $("pRecues");
+    zone.textContent = "";
+    if (!recuesDuJour.length) {
+      zone.appendChild(el("p", "p-recues-vide", "Pas encore de réservation reçue aujourd'hui."));
+      return;
+    }
+    recuesDuJour.forEach(function (c, i) {
+      var ligne = el("button", "p-recue");
+      ligne.type = "button";
+      var q = el("span", "p-recue-quand", "reçue");
+      q.appendChild(el("b", null, heureLocale(c.recueLe)));
+      ligne.appendChild(q);
+      var t = el("span", "p-recue-txt", dateCourte(c.date) + " · " + (heure(c.heurePc) || "RDV " + heure(c.heureRdv)));
+      t.appendChild(el("small", null, adresseCourte(c.depart) + " → " + adresseCourte(c.destination)));
+      ligne.appendChild(t);
+      if (i === 0) ligne.appendChild(el("span", "p-recue-new", "Nouvelle"));
+      // Toucher une reservation : on va sur le jour de la course, deja ouverte.
+      ligne.addEventListener("click", function () {
+        jour = c.date;
+        ouvertes["c" + c.id] = true;
+        chargerJour().then(function () {
+          var cible = $("pListeJour");
+          if (cible) cible.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+      zone.appendChild(ligne);
+    });
+  }
+
   // ----- Vue Semaine (7 jours a partir d'aujourd'hui) -----
+  // Mise a jour automatique de l'onglet Jour (nouvelle reservation sans recharger).
+  setInterval(function () {
+    if (moi && vueActive === "jour" && document.visibilityState === "visible" && $("pFenetre").hidden) chargerJour();
+  }, 60000);
+  document.addEventListener("visibilitychange", function () {
+    if (moi && vueActive === "jour" && document.visibilityState === "visible") chargerJour();
+  });
+
   function chargerSemaine() {
     var debut = isoAujourdhui(), fin = decaler(debut, 6);
     var liste = $("pListeSemaine");
@@ -935,6 +999,17 @@
     $("pOnglets").addEventListener("click", function (e) {
       var b = e.target.closest("button");
       if (b) changerVue(b.getAttribute("data-onglet"));
+    });
+    $("pStatRecues").addEventListener("click", function () {
+      var z = $("pRecues"), o = z.hidden;
+      z.hidden = !o;
+      $("pStatRecues").classList.toggle("ouvert", o);
+      $("pStatRecues").setAttribute("aria-expanded", o ? "true" : "false");
+      if (o) afficherRecues();
+    });
+    $("pStatPrevues").addEventListener("click", function () {
+      jour = isoAujourdhui();
+      chargerJour().then(function () { $("pListeJour").scrollIntoView({ behavior: "smooth", block: "start" }); });
     });
     $("pJourAvant").addEventListener("click", function () { jour = decaler(jour, -1); chargerJour(); });
     $("pJourApres").addEventListener("click", function () { jour = decaler(jour, 1); chargerJour(); });

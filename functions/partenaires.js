@@ -363,6 +363,21 @@ export async function routePartenaires(request, env, url) {
   }
 
   // Liste des courses sur une periode (par defaut : aujourd'hui).
+  // Resume du jour pour motiver l'equipe : reservations Google Ads RECUES
+  // aujourd'hui (quelle que soit la date de la course) et courses prevues.
+  if (sousChemin === "/resume" && methode === "GET") {
+    const auj = aujourdhuiParis();
+    const jourParis = (utc) => new Intl.DateTimeFormat("fr-CA", { timeZone: "Europe/Paris" }).format(new Date(String(utc).replace(" ", "T") + "Z"));
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM courses WHERE cree_le >= datetime('now', '-2 days') AND annulee = 0 ORDER BY cree_le DESC, id DESC"
+    ).all();
+    const noms = await nomsPartenaires(env.DB);
+    const recues = (results || []).filter((c) => jourParis(c.cree_le) === auj).map((c) => ({ ...vueCourse(c, moi, noms), recueLe: c.cree_le }));
+    const hier = (results || []).filter((c) => jourParis(c.cree_le) === decalerJours(auj, -1)).length;
+    const prevues = await env.DB.prepare("SELECT COUNT(*) AS n FROM courses WHERE date = ? AND annulee = 0").bind(auj).first();
+    return json({ ok: true, jour: auj, recues, recuesHier: hier, prevues: prevues ? prevues.n : 0 });
+  }
+
   if (sousChemin === "/courses" && methode === "GET") {
     const debut = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("debut") || "") ? url.searchParams.get("debut") : aujourdhuiParis();
     let fin = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("fin") || "") ? url.searchParams.get("fin") : debut;

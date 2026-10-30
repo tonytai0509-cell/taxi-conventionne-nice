@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261112" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261113" />
 </head>
 <body>
   <header class="p-haut">
@@ -42,16 +42,31 @@
     </nav>
 
     <section id="vJour">
+      <div class="p-stats">
+        <button class="p-stat" id="pStatRecues" type="button" aria-expanded="false" aria-controls="pRecues">
+          <b class="p-stat-nb or" id="pNbRecues">–</b>
+          <span class="p-stat-txt">Réservations reçues<small>aujourd'hui</small></span><svg class="p-stat-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <button class="p-stat" id="pStatPrevues" type="button">
+          <b class="p-stat-nb" id="pNbPrevues">–</b>
+          <span class="p-stat-txt">Courses prévues<small>aujourd'hui</small></span><svg class="p-stat-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="p-recues" id="pRecues" hidden></div>
+
       <div class="p-nav-date">
         <button id="pJourAvant" type="button" aria-label="Jour précédent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
         <div class="p-nav-date-txt"><b id="pJourTitre"></b><span id="pJourSous"></span></div>
         <button id="pJourApres" type="button" aria-label="Jour suivant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </div>
+      <div class="p-jour-entete"><h2>Courses du jour</h2><span id="pJourCompte"></span></div>
+      <div id="pListeJour"></div>
+      <p class="p-aide" id="pAideDetails" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg>Appuyez sur une course pour voir les détails.</p>
       <div id="pZoneAjouter" hidden>
         <button class="p-ajouter" id="pBoutonAjouter" type="button">＋ Ajouter une course</button>
-        <p class="p-ajouter-aide">Pour un client ayant appelé après une publicité</p>
+        <p class="p-ajouter-aide">Client ayant appelé après une publicité.</p>
       </div>
-      <div id="pListeJour"></div>
+      <p class="p-aide p-aide-bas"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg>Réservations reçues : touchez le compteur pour les consulter.</p>
     </section>
 
     <section id="vSemaine" hidden><div id="pListeSemaine"></div></section>
@@ -221,6 +236,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261112"></script>
+  <script src="/js/partenaires.js?v=20261113"></script>
 </body>
 </html>
