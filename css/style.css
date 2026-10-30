@@ -394,11 +394,14 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
    hauteur restante (environ 400px : en-tete, titre et barre du bas). */
 @media (max-width: 699px) {
   .hero-photo {
-    height: calc(100vh - 400px);
-    height: calc(100svh - 400px);
-    min-height: 250px;
+    height: calc(100vh - 350px);
+    height: calc(100svh - 350px);
+    min-height: 260px;
   }
-  .hero-photo img { object-position: center 72%; }
+  .hero-photo img { object-position: center 62%; }
+  .hero-content { padding-top: 12px; }
+  .hero-v2-eyebrow { margin-bottom: 10px; }
+  .hero-title-box { padding: 14px 14px; }
 }
 
 @media (min-width: 700px) {
