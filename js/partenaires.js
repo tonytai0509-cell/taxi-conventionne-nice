@@ -135,6 +135,82 @@
       c.saisie ? "✓" : "●", c.saisie ? "prise" : "a-saisir", carteMaCourse(c));
   }
 
+  // ----- Fiche copiable : chaque information se copie d'un seul appui -----
+  function copier(texte, quoi) {
+    function repli() {
+      var t = document.createElement("textarea");
+      t.value = texte;
+      t.setAttribute("readonly", "");
+      t.className = "p-cache-copie";
+      document.body.appendChild(t);
+      t.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(t);
+      if (ok) message(quoi + " copié"); else prompt("Copiez :", texte);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texte).then(function () { message(quoi + " copié"); }, repli);
+    else repli();
+  }
+
+  function iconeCopie() {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("class", "p-ico p-ico-copie");
+    var r = document.createElementNS(ns, "rect");
+    r.setAttribute("x", "8.5"); r.setAttribute("y", "8.5"); r.setAttribute("width", "11"); r.setAttribute("height", "11"); r.setAttribute("rx", "2");
+    svg.appendChild(r);
+    var pth = document.createElementNS(ns, "path");
+    pth.setAttribute("d", "M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5");
+    svg.appendChild(pth);
+    return svg;
+  }
+
+  // « Paul Martin Durand » -> prenom « Paul », nom « Martin Durand ».
+  function separerNom(complet) {
+    var t = String(complet || "").trim().split(/\s+/);
+    return t.length > 1 ? { prenom: t[0], nom: t.slice(1).join(" ") } : { prenom: "", nom: t[0] || "" };
+  }
+
+  function ficheCopiable(c) {
+    var fiche = el("div", "p-fiche");
+    function ligne(etiquette, valeur, aCopier, appel) {
+      if (!valeur) return;
+      var l = el("div", "p-fiche-ligne");
+      var b = el("button", "p-fiche-copie");
+      b.type = "button";
+      b.setAttribute("aria-label", "Copier " + etiquette.toLowerCase() + " : " + valeur);
+      b.appendChild(el("span", "p-fiche-etiq", etiquette));
+      b.appendChild(el("span", "p-fiche-val", valeur));
+      b.appendChild(iconeCopie());
+      b.addEventListener("click", function () { copier(aCopier || valeur, etiquette); });
+      l.appendChild(b);
+      if (appel) {
+        var a = el("a", "p-fiche-appel");
+        a.href = "tel:" + appel;
+        a.setAttribute("aria-label", "Appeler " + valeur);
+        a.appendChild(icone("tel"));
+        l.appendChild(a);
+      }
+      fiche.appendChild(l);
+    }
+    var cl = c.client || {};
+    var n = separerNom(cl.nom);
+    ligne("Nom", n.nom);
+    ligne("Prénom", n.prenom);
+    [cl.telephone, cl.telephone2].filter(Boolean).forEach(function (t, i) {
+      var chiffres = t.replace(/[^0-9+]/g, "");
+      ligne(i ? "Autre tél." : "Téléphone", t, chiffres, chiffres);
+    });
+    if (cl.nir) ligne("N° sécu", formaterNir(cl.nir), String(cl.nir).replace(/\s/g, ""));
+    if (cl.naissance) ligne("Naissance", cl.naissance.split("-").reverse().join("/"));
+    ligne("Départ", c.depart);
+    ligne("Destination", c.destination);
+    return fiche;
+  }
+
   // ----- Carte d'une course -----
   function carteCourse(c) {
     var carte = el("div", "p-carte" + (c.annulee ? " annulee" : ""));
@@ -144,14 +220,8 @@
     l1.appendChild(el("span", "p-ads", "GOOGLE ADS"));
     carte.appendChild(l1);
     if (c.parTelephone) carte.appendChild(el("span", "p-tel", "📞 PAR TÉLÉPHONE · ajoutée par " + c.ajouteePar));
-    var adr = el("div", "p-adr");
-    adr.appendChild(document.createTextNode("📍 "));
-    adr.appendChild(el("b", null, c.depart));
-    adr.appendChild(document.createElement("br"));
-    adr.appendChild(document.createTextNode(c.type === "prive" ? "🏁 " : "🏥 "));
-    adr.appendChild(el("b", null, c.destination));
-    if (c.heureRdv && c.heurePc) adr.appendChild(document.createTextNode(" · RDV " + heure(c.heureRdv)));
-    carte.appendChild(adr);
+    if (c.heureRdv && c.heurePc) carte.appendChild(el("div", "p-rdv", "Rendez-vous " + heure(c.heureRdv)));
+    carte.appendChild(ficheCopiable(c));
     var infos = [c.options, c.commentaire].filter(Boolean).join(" · ");
     if (infos) carte.appendChild(el("div", "p-info", infos));
 
@@ -180,25 +250,14 @@
     }
     carte.appendChild(etat);
 
-    if (c.client && (c.client.nom || c.client.telephone)) {
-      var cl = el("div", "p-client");
-      cl.appendChild(document.createTextNode("👤 " + (c.client.nom || "Client") + " "));
-      [c.client.telephone, c.client.telephone2].filter(Boolean).forEach(function (t) {
-        cl.appendChild(document.createTextNode("· 📞 "));
-        var a = el("a", null, t);
-        a.href = "tel:" + t.replace(/[^0-9+]/g, "");
-        cl.appendChild(a);
-        cl.appendChild(document.createTextNode(" "));
-      });
-      if (c.client.nir || c.client.naissance) {
-        var sante = el("div", "p-client-sante");
-        if (c.client.nir) sante.appendChild(el("span", null, "🪪 " + formaterNir(c.client.nir)));
-        if (c.client.naissance) sante.appendChild(el("span", null, "🎂 " + c.client.naissance.split("-").reverse().join("/")));
-        cl.appendChild(sante);
-      }
-      carte.appendChild(cl);
-    }
     return carte;
+  }
+
+  // Cle du numero de securite sociale (2A -> 19, 2B -> 18 pour la Corse).
+  function cleNir(treize) {
+    if (!/^[12378]\d{4}(\d{2}|2A|2B)\d{6}$/.test(treize)) return "";
+    var n = Number(treize.replace("2A", "19").replace("2B", "18"));
+    return String(97 - (n % 97)).padStart(2, "0");
   }
 
   // « 185057800608436 » -> « 1 85 05 78 006 084 36 »
@@ -346,24 +405,8 @@
     l1.appendChild(el("span", "p-type", c.type === "prive" ? "Course privée" : "Transport médical"));
     l1.appendChild(el("span", "p-origine", ORIGINES[c.origine] || "🌐 SITE"));
     carte.appendChild(l1);
-    var adr = el("div", "p-adr");
-    adr.appendChild(document.createTextNode("📍 "));
-    adr.appendChild(el("b", null, c.depart));
-    adr.appendChild(document.createElement("br"));
-    adr.appendChild(document.createTextNode("🏁 "));
-    adr.appendChild(el("b", null, c.destination));
-    if (c.heureRdv && (c.heurePc || c.pcADefinir)) adr.appendChild(document.createTextNode(" · RDV " + heure(c.heureRdv)));
-    carte.appendChild(adr);
-    var cl = el("div", "p-client");
-    cl.appendChild(document.createTextNode("👤 " + (c.client.nom || "Client") + " "));
-    [c.client.telephone, c.client.telephone2].filter(Boolean).forEach(function (t) {
-      cl.appendChild(document.createTextNode("· 📞 "));
-      var a = el("a", null, t);
-      a.href = "tel:" + t.replace(/[^0-9+]/g, "");
-      cl.appendChild(a);
-      cl.appendChild(document.createTextNode(" "));
-    });
-    carte.appendChild(cl);
+    if (c.heureRdv && (c.heurePc || c.pcADefinir)) carte.appendChild(el("div", "p-rdv", "Rendez-vous " + heure(c.heureRdv)));
+    carte.appendChild(ficheCopiable(c));
     var infos = [c.options, c.reservePar ? "Réservé par " + c.reservePar : "", c.commentaire ? "💬 " + c.commentaire : ""].filter(Boolean).join(" · ");
     if (infos) carte.appendChild(el("div", "p-info", infos));
     if (!sansBouton) {
@@ -1063,7 +1106,15 @@
     document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !fenetre.hidden) fermerFeuille(); });
     activerSuggestions(form.elements.depart);
     activerSuggestions(form.elements.destination);
-    form.elements.nir.addEventListener("input", function () { this.value = formaterNir(this.value); });
+    form.elements.nir.addEventListener("input", function (e) {
+      var c = this.value.toUpperCase().replace(/[^0-9AB]/g, "");
+      // 13 caracteres tapes : on ajoute la cle (97 - numero modulo 97).
+      if (c.length === 13 && (!e.inputType || e.inputType.indexOf("insert") === 0)) {
+        var cle = cleNir(c);
+        if (cle) { c += cle; message("Clé calculée : " + cle); }
+      }
+      this.value = formaterNir(c);
+    });
     activerHeure(form.elements.heurePc);
     activerHeure(form.elements.heureRdv);
     function erreurForm(texte, champ) {
