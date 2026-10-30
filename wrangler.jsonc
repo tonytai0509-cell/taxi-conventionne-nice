@@ -9,5 +9,13 @@
     "directory": "./",
     "binding": "ASSETS",
     "not_found_handling": "404-page"
-  }
+  },
+  // Base de l'espace partenaires Google Ads (functions/partenaires.js).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "partenaires",
+      "database_id": "d4803017-41d8-45e7-997f-645fa6eb1734"
+    }
+  ]
 }
