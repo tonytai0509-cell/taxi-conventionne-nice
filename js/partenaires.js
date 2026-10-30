@@ -412,18 +412,32 @@
       zone.textContent = "";
       r.partenaires.forEach(function (p) {
         var d = el("div", "p-partenaire" + (p.actif ? "" : " inactif"));
-        var tete = el("div", "p-part-tete");
-        tete.appendChild(el("div", "nom", p.nom + (p.admin ? " (vous)" : "")));
-        tete.appendChild(el("div", "det", p.telephone ? "📞 " + p.telephone : "pas de téléphone"));
+        var tete = el(p.admin ? "div" : "button", "p-part-tete");
+        tete.appendChild(el("span", "nom", p.nom + (p.admin ? " (vous)" : "") + (p.actif ? "" : " · désactivé")));
+        tete.appendChild(el("span", "det", p.telephone ? "📞 " + p.telephone : "pas de téléphone"));
         d.appendChild(tete);
         if (p.admin) { zone.appendChild(d); return; }
+        // Options repliees : on touche le nom pour les afficher.
+        var cle = "p" + p.id;
+        tete.type = "button";
+        tete.appendChild(el("span", "p-repli-fleche", "▾"));
+        tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+        var options = el("div", "p-part-options");
+        options.hidden = !ouvertes[cle];
+        d.classList.toggle("ouverte", !!ouvertes[cle]);
+        tete.addEventListener("click", function () {
+          ouvertes[cle] = !ouvertes[cle];
+          options.hidden = !ouvertes[cle];
+          d.classList.toggle("ouverte", !!ouvertes[cle]);
+          tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+        });
         function modifier(corps, apres) {
           return api("POST", "/admin/partenaires/" + p.id, corps).then(function (res) { if (apres) apres(res); chargerPartenaires(); }).catch(function (e) { message(e.message); chargerPartenaires(); });
         }
         var inters = el("div", "p-inters");
         inters.appendChild(interrupteur("Accès actif", p.actif, function (v) { modifier({ actif: v }); }));
         inters.appendChild(interrupteur("Peut ajouter des courses", p.peut_ajouter, function (v) { modifier({ peutAjouter: v }); }));
-        d.appendChild(inters);
+        options.appendChild(inters);
 
         var grille = el("div", "p-part-boutons");
         function bouton(texte, action, classe) {
@@ -451,7 +465,8 @@
           if (!confirm("Créer un nouveau lien pour " + p.nom + " ? L'ancien ne marchera plus.")) return;
           modifier({ nouveauLien: true }, function () { message("Nouveau lien créé : l'ancien ne marche plus."); });
         });
-        d.appendChild(grille);
+        options.appendChild(grille);
+        d.appendChild(options);
         zone.appendChild(d);
       });
     }).catch(function () {});
