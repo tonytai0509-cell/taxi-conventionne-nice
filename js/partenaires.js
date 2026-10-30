@@ -99,7 +99,7 @@
     var s = String(a || "").split(",")[0].replace(/\s*\b\d{5}\b.*$/, "").trim();
     s = s.replace(/\bboulevard\b/gi, "bd").replace(/\bavenue\b/gi, "av.").replace(/\bchemin\b/gi, "ch.")
       .replace(/\broute\b/gi, "rte").replace(/\bplace\b/gi, "pl.").replace(/\ballée\b/gi, "all.")
-      .replace(/^hôpital\b/i, "Hôp.").replace(/^clinique\b/i, "Clin.").replace(/^centre\b/i, "Ctre").replace(/\bmaréchal\b/gi, "Mal");
+      .replace(/^hôpital\b/i, "Hôp.").replace(/^clinique\b/i, "Clin.").replace(/^centre\b/i, "Ctre").replace(/\bmaréchal\b/gi, "Mal").replace(/\bdocteur\b/gi, "Dr").replace(/^aéroport nice - terminal /i, "Aéroport T");
     return s || String(a || "");
   }
 
@@ -264,7 +264,7 @@
     return heure(c.heurePc) || "RDV " + heure(c.heureRdv);
   }
 
-  function carteMaCourse(c) {
+  function carteMaCourse(c, sansBouton) {
     var carte = el("div", "p-carte" + (c.saisie ? " saisie" : ""));
     var l1 = el("div", "p-l1");
     l1.appendChild(el("span", "p-heure", heureMa(c)));
@@ -291,18 +291,63 @@
     carte.appendChild(cl);
     var infos = [c.options, c.reservePar ? "Réservé par " + c.reservePar : "", c.commentaire ? "💬 " + c.commentaire : ""].filter(Boolean).join(" · ");
     if (infos) carte.appendChild(el("div", "p-info", infos));
-    var b = el("button", "p-saisie", c.saisie ? "✓ Saisie dans l'appli" : "☐ Pas encore saisie");
-    b.addEventListener("click", function () {
-      api("POST", "/admin/mes-courses/" + c.id + "/saisie").then(chargerMes).catch(function (e) { message(e.message); });
-    });
-    carte.appendChild(b);
+    if (!sansBouton) {
+      var b = el("button", "p-saisie", c.saisie ? "✓ Saisie dans l'appli" : "☐ Pas encore saisie");
+      b.addEventListener("click", function () {
+        api("POST", "/admin/mes-courses/" + c.id + "/saisie").then(chargerMes).catch(function (e) { message(e.message); });
+      });
+      carte.appendChild(b);
+    }
     return carte;
+  }
+
+  var periodeMes = "";
+  var MOIS_COURT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+  // Une course de « Mes courses » : case « saisie », heure, trajet court ; detail au toucher.
+  function ligneMes(c) {
+    var cle = "m" + c.id;
+    var d = el("div", "p-mes-ligne" + (c.saisie ? " saisie" : "") + (ouvertes[cle] ? " ouverte" : ""));
+    var tete = el("div", "p-mes-tete");
+    var caseSaisie = el("button", "p-case-saisie");
+    caseSaisie.type = "button";
+    caseSaisie.setAttribute("role", "checkbox");
+    caseSaisie.setAttribute("aria-checked", c.saisie ? "true" : "false");
+    caseSaisie.setAttribute("aria-label", c.saisie ? "Saisie dans l'appli (toucher pour décocher)" : "Marquer comme saisie dans l'appli");
+    caseSaisie.addEventListener("click", function () {
+      caseSaisie.disabled = true;
+      api("POST", "/admin/mes-courses/" + c.id + "/saisie").then(chargerMes).catch(function (e) { message(e.message); caseSaisie.disabled = false; });
+    });
+    tete.appendChild(caseSaisie);
+    var ouvrir = el("button", "p-mes-ouvrir");
+    ouvrir.type = "button";
+    ouvrir.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+    ouvrir.appendChild(el("span", "p-mes-heure", c.pcADefinir ? "PC ?" : heure(c.heurePc) || "RDV " + heure(c.heureRdv)));
+    ouvrir.appendChild(el("span", "p-mes-trajet", adresseCourte(c.depart) + " → " + adresseCourte(c.destination)));
+    var chev = icone("suivant");
+    chev.setAttribute("class", "p-ico p-ico-bas");
+    ouvrir.appendChild(chev);
+    tete.appendChild(ouvrir);
+    d.appendChild(tete);
+    var det = carteMaCourse(c, true);
+    det.classList.add("p-mes-det");
+    det.hidden = !ouvertes[cle];
+    ouvrir.addEventListener("click", function () {
+      ouvertes[cle] = !ouvertes[cle];
+      det.hidden = !ouvertes[cle];
+      d.classList.toggle("ouverte", !!ouvertes[cle]);
+      ouvrir.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+    });
+    d.appendChild(det);
+    return d;
   }
 
   function chargerMes() {
     var fin = decaler(semaineMes, 6);
     var d1 = new Date(semaineMes + "T12:00:00"), d2 = new Date(fin + "T12:00:00");
-    $("pMesTitre").textContent = "Du " + d1.getDate() + " " + MOIS[d1.getMonth()] + " au " + d2.getDate() + " " + MOIS[d2.getMonth()];
+    $("pMesTitre").textContent = d1.getDate() + " " + MOIS_COURT[d1.getMonth()] + (d1.getFullYear() !== d2.getFullYear() ? " " + d1.getFullYear() : "") +
+      " – " + d2.getDate() + " " + MOIS_COURT[d2.getMonth()] + " " + d2.getFullYear();
+    periodeMes = "du " + d1.getDate() + " " + MOIS[d1.getMonth()] + " au " + d2.getDate() + " " + MOIS[d2.getMonth()];
     var liste = $("pListeMes");
     // Courses Google Ads de la meme semaine, pour le recap « Copier ».
     adsSemaine = [];
@@ -315,15 +360,19 @@
     api("GET", "/admin/mes-courses?debut=" + semaineMes + "&fin=" + fin).then(function (r) {
       mesCourses = r.courses;
       liste.textContent = "";
-      if (!r.courses.length) { liste.appendChild(el("div", "p-vide", "Aucune réservation du site sur ces 7 jours.")); return; }
-      var dateCourante = null;
+      var n = r.courses.length, aSaisir = r.courses.filter(function (c) { return !c.saisie; }).length;
+      $("pMesCompte").textContent = n + " réservation" + (n > 1 ? "s" : "") + " · " + aSaisir + " à saisir";
+      if (!n) { liste.appendChild(carteVide("Aucune réservation cette semaine", "Vos réservations du site apparaîtront ici.")); return; }
+      var groupe = null, dateCourante = null;
       r.courses.forEach(function (c) {
         if (c.date !== dateCourante) {
           dateCourante = c.date;
-          var n = r.courses.filter(function (x) { return x.date === c.date; }).length;
-          liste.appendChild(el("div", "p-titre-jour", titreJour(c.date) + " · " + n + " course" + (n > 1 ? "s" : "")));
+          var t = titreJour(c.date).replace(/(^|· )(\S)/g, function (m, avant, l) { return avant + l.toUpperCase(); });
+          liste.appendChild(el("h3", "p-mes-jour", t));
+          groupe = el("div", "p-mes-groupe");
+          liste.appendChild(groupe);
         }
-        liste.appendChild(ligneMaCourse(c));
+        groupe.appendChild(ligneMes(c));
       });
     }).catch(function () {});
   }
@@ -337,7 +386,7 @@
       return a.date < b.date ? -1 : a.date > b.date ? 1 : ha < hb ? -1 : ha > hb ? 1 : 0;
     });
     if (!choix.length) return "";
-    var lignes = ["Récap " + NOMS_ORIGINE[filtre] + " · " + $("pMesTitre").textContent.toLowerCase() + " (" + choix.length + ")"], dateCourante = null;
+    var lignes = ["Récap " + NOMS_ORIGINE[filtre] + " · " + periodeMes + " (" + choix.length + ")"], dateCourante = null;
     choix.forEach(function (c) {
       if (c.date !== dateCourante) {
         dateCourante = c.date;
@@ -880,6 +929,12 @@
     $("pMoisApres").addEventListener("click", function () { mois = decalerMois(mois, 1); chargerBilan(); });
     $("pMesAvant").addEventListener("click", function () { semaineMes = decaler(semaineMes, -7); chargerMes(); });
     $("pMesApres").addEventListener("click", function () { semaineMes = decaler(semaineMes, 7); chargerMes(); });
+    $("pCopierTete").addEventListener("click", function () {
+      var rub = $("rubCopier"), o = !rub.classList.contains("ouverte");
+      rub.classList.toggle("ouverte", o);
+      rub.querySelector(".p-rub-corps").hidden = !o;
+      $("pCopierTete").setAttribute("aria-expanded", o ? "true" : "false");
+    });
     $("pMesCopier").addEventListener("click", function () {
       var filtre = $("pMesFiltre").value;
       var t = texteMes(filtre);

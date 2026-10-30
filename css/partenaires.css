@@ -336,3 +336,30 @@ body.p-feuille-ouverte { overflow: hidden; }
 .p-chiffre { border: 1px solid #ece6d8; box-shadow: 0 1px 4px rgba(11, 31, 58, .05); }
 #vBilan .p-bloc { border: 1px solid #ece6d8; box-shadow: 0 1px 4px rgba(11, 31, 58, .05); }
 .p-facture-ligne:not(.choisie) .p-facture-mois { overflow-wrap: anywhere; }
+
+/* ===== Mes courses : groupes par jour, case « saisie » ===== */
+.p-mes-entete { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin: 2px 16px 10px; flex-wrap: wrap; }
+.p-mes-entete h2 { margin: 0; font-size: 20px; color: var(--nuit); line-height: 1.2; }
+.p-mes-entete span { font-size: 13px; color: var(--doux); }
+.p-mes-entete p { margin: 0; font-size: 12px; color: var(--doux); }
+.p-mes-jour { margin: 14px 18px 6px; font-size: 15px; color: var(--nuit); }
+.p-mes-groupe { margin: 0 16px; background: #fff; border: 1px solid #ece6d8; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(11, 31, 58, .05); }
+.p-mes-ligne + .p-mes-ligne { border-top: 1px solid #f0ebe0; }
+.p-mes-tete { display: flex; align-items: center; }
+.p-case-saisie { flex: none; width: 52px; height: 50px; border: 0; background: none; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.p-case-saisie::before { content: ""; width: 22px; height: 22px; border-radius: 6px; border: 2px solid #b9b3a5; background: #fff; box-sizing: border-box; }
+.p-case-saisie { position: relative; }
+.p-mes-ligne.saisie .p-case-saisie::before { border-color: var(--vert); background: var(--vert); }
+.p-mes-ligne.saisie .p-case-saisie::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: translate(-50%, -62%) rotate(45deg); }
+.p-mes-det.saisie { opacity: 1; }
+.p-case-saisie:disabled { opacity: .5; }
+.p-mes-ouvrir { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 12px 14px 12px 0; text-align: left; cursor: pointer; color: var(--nuit); font: inherit; }
+.p-mes-heure { flex: none; font-weight: 800; font-size: 15px; min-width: 46px; }
+.p-mes-trajet { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-mes-ligne.saisie .p-mes-heure, .p-mes-ligne.saisie .p-mes-trajet { color: #5f6a78; }
+.p-ico-bas { color: var(--doux); transform: rotate(90deg); transition: transform .15s; }
+.p-mes-ligne.ouverte .p-ico-bas { transform: rotate(-90deg); }
+.p-mes-det { margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; border-top: 1px solid #f0ebe0; background: #fcfbf8 !important; }
+.p-mes-copier { margin: 14px 16px 0; }
+.p-mes-copier .p-bouton { margin-top: 12px; }
+.p-mes-aide { margin: 12px 16px 4px; text-align: center; font-size: 12.5px; color: var(--doux); }

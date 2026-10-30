@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261110" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261111" />
 </head>
 <body>
   <header class="p-haut">
@@ -66,24 +66,35 @@
     </section>
 
     <section id="vMes" hidden>
-      <div class="p-nav-jour">
-        <button id="pMesAvant" aria-label="Semaine précédente">‹</button>
-        <div id="pMesTitre"></div>
-        <button id="pMesApres" aria-label="Semaine suivante">›</button>
+      <div class="p-nav-date">
+        <button id="pMesAvant" type="button" aria-label="Semaine précédente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="p-nav-date-txt"><b id="pMesTitre"></b></div>
+        <button id="pMesApres" type="button" aria-label="Semaine suivante"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       </div>
-      <p class="p-petit p-marge">Vos réservations du site (QR code, cartes, site, vos clients). Cochez-les au fur et à mesure que vous les saisissez dans l'appli. Effacées 30 jours après la course.</p>
+      <div class="p-mes-entete">
+        <div><h2>Mes courses</h2><span id="pMesCompte"></span></div>
+        <p>Cochez après saisie dans votre appli.</p>
+      </div>
       <div id="pListeMes"></div>
-      <div class="p-copier">
-        <label for="pMesFiltre">Copier le récap de la semaine</label>
-        <select id="pMesFiltre">
-          <option value="tout">Toutes les courses</option>
-          <option value="ads">Google Ads seulement</option>
-          <option value="qr">QR code / cartes seulement</option>
-          <option value="site">Site seulement</option>
-          <option value="client_tony">Vos clients seulement</option>
-        </select>
-        <button class="p-bouton" id="pMesCopier" type="button">📋 Copier en texte</button>
+      <div class="p-rub p-mes-copier" id="rubCopier">
+        <button class="p-rub-tete" type="button" aria-expanded="false" id="pCopierTete">
+          <span class="p-rub-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5" width="13" height="16" rx="2"/><path d="M9 5V3.8A.8.8 0 0 1 9.8 3h4.4a.8.8 0 0 1 .8.8V5M9 11h6M9 15h4"/></svg></span>
+          <span class="p-rub-txt"><b>Copier le récapitulatif</b></span>
+          <svg class="p-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="p-rub-corps" hidden>
+          <label class="p-rub-label" for="pMesFiltre">Courses à copier</label>
+          <select id="pMesFiltre" class="p-select">
+            <option value="tout">Toutes les courses</option>
+            <option value="ads">Google Ads seulement</option>
+            <option value="qr">QR code / cartes seulement</option>
+            <option value="site">Site seulement</option>
+            <option value="client_tony">Vos clients seulement</option>
+          </select>
+          <button class="p-bouton" id="pMesCopier" type="button">📋 Copier en texte</button>
+        </div>
       </div>
+      <p class="p-mes-aide">Les détails s'ouvrent en touchant une course.</p>
     </section>
 
     <section id="vGestion" hidden>
@@ -210,6 +221,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261110"></script>
+  <script src="/js/partenaires.js?v=20261111"></script>
 </body>
 </html>
