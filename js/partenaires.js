@@ -331,9 +331,43 @@
     return c;
   }
 
+  function lienFacture(id) {
+    var a = el("a", "p-facture-pdf", "📄 PDF");
+    a.href = "/api/partenaires/factures/" + id;
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  }
+
+  function ligneFacture(titre, montant, paye, factureId) {
+    var r = el("div", "p-facture");
+    var g = el("div", "p-facture-txt");
+    g.appendChild(el("b", null, titre));
+    g.appendChild(el("span", paye ? "p-paye" : "p-du", (montant == null ? "" : euros(montant) + " · ") + (paye ? "✅ payée" : "🔴 à régler")));
+    r.appendChild(g);
+    r.appendChild(factureId ? lienFacture(factureId) : el("span", "p-petit", "PDF à venir"));
+    return r;
+  }
+
   function chargerBilan() {
-    $("pMoisTitre").textContent = "Bilan de " + titreMois(mois);
     var zone = $("pBilan");
+    // Chauffeur : seulement ses factures, tous mois confondus.
+    if (!moi.admin) {
+      $("pMoisTitre").parentNode.hidden = true;
+      api("GET", "/mes-factures").then(function (r) {
+        zone.textContent = "";
+        var bloc = el("div", "p-bloc");
+        bloc.appendChild(el("h3", null, "Mes factures"));
+        if (!r.factures.length) bloc.appendChild(el("p", "p-petit", "Aucune facture pour le moment."));
+        r.factures.forEach(function (f) {
+          var t = titreMois(f.mois);
+          bloc.appendChild(ligneFacture(t.charAt(0).toUpperCase() + t.slice(1), f.montant, f.paye, f.factureId));
+        });
+        zone.appendChild(bloc);
+      }).catch(function () {});
+      return;
+    }
+    $("pMoisTitre").textContent = "Bilan de " + titreMois(mois);
     api("GET", "/bilan?mois=" + mois).then(function (b) {
       zone.textContent = "";
       var grille = el("div", "p-chiffres");
@@ -344,21 +378,16 @@
       zone.appendChild(grille);
       if (b.parTelephone) zone.appendChild(el("p", "p-petit p-marge", "Dont " + b.parTelephone + " reçue(s) par téléphone."));
 
-
-      var budget = el("div", "p-bloc");
-      budget.appendChild(el("h3", null, "Participation au budget"));
+      var bloc = el("div", "p-bloc");
+      bloc.appendChild(el("h3", null, "Factures du mois"));
       var aucune = true;
       b.partenaires.forEach(function (p) {
-        if (p.budget == null) return;
+        if (p.budget == null && !p.factureId) return;
         aucune = false;
-        var r = el("div", "p-rang");
-        r.appendChild(el("span", null, p.nom));
-        var v = el("b", p.paye ? "p-paye" : "p-du", euros(p.budget) + (p.paye ? " ✓ payé" : " · à régler"));
-        r.appendChild(v);
-        budget.appendChild(r);
+        bloc.appendChild(ligneFacture(p.nom, p.budget, p.paye, p.factureId));
       });
-      if (aucune) budget.appendChild(el("p", "p-petit", "Pas encore de participation saisie pour ce mois."));
-      zone.appendChild(budget);
+      if (aucune) bloc.appendChild(el("p", "p-petit", "Pas encore de facture pour ce mois (à faire dans Gestion)."));
+      zone.appendChild(bloc);
     }).catch(function () {});
   }
 
@@ -511,8 +540,9 @@
       $("pDepense").value = b.depense == null ? "" : b.depense;
       var zone = $("pParts");
       zone.textContent = "";
-      zone.appendChild(el("p", "p-petit", "Part de chacun pour ce mois :"));
+      zone.appendChild(el("p", "p-petit", "Facture de chacun pour ce mois :"));
       b.partenaires.forEach(function (p) {
+        var bloc = el("div", "p-part-facture");
         var r = el("div", "p-part-budget");
         r.appendChild(el("span", null, p.nom));
         var montant = el("input");
@@ -531,7 +561,34 @@
         paye.addEventListener("change", enregistrer);
         r.appendChild(montant);
         r.appendChild(lab);
-        zone.appendChild(r);
+        bloc.appendChild(r);
+
+        // PDF de la facture : joindre / remplacer / ouvrir.
+        var ligne = el("div", "p-part-pdf");
+        var fichier = el("input");
+        fichier.type = "file";
+        fichier.accept = "application/pdf,.pdf";
+        fichier.hidden = true;
+        var joindre = el("button", null, p.factureId ? "📎 Remplacer la facture" : "📎 Joindre la facture");
+        joindre.type = "button";
+        joindre.addEventListener("click", function () { fichier.click(); });
+        fichier.addEventListener("change", function () {
+          var f = fichier.files[0];
+          if (!f) return;
+          if (f.size > 1800 * 1024) { message("PDF trop lourd (1,8 Mo maximum)."); return; }
+          joindre.disabled = true;
+          joindre.textContent = "Envoi…";
+          fetch("/api/partenaires/admin/factures?mois=" + moisBudget + "&partenaire=" + p.id + "&nom=" + encodeURIComponent(f.name), {
+            method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/pdf" }, body: f,
+          }).then(function (rep) { return rep.json().then(function (j) { if (!rep.ok || !j.ok) throw new Error(j.error || "Envoi impossible."); }); })
+            .then(function () { message("Facture de " + p.nom + " ajoutée."); chargerBudget(); })
+            .catch(function (e) { message(e.message); chargerBudget(); });
+        });
+        ligne.appendChild(joindre);
+        ligne.appendChild(fichier);
+        if (p.factureId) ligne.appendChild(lienFacture(p.factureId));
+        bloc.appendChild(ligne);
+        zone.appendChild(bloc);
       });
     }).catch(function () {});
   }

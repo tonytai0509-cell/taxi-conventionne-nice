@@ -90,7 +90,19 @@ const SCHEMA = [
    )`,
   `CREATE INDEX IF NOT EXISTS idx_mes_courses_date ON mes_courses (date)`,
   `CREATE TABLE IF NOT EXISTS reglages (cle TEXT PRIMARY KEY, valeur TEXT)`,
+  // Factures mensuelles (PDF joints par Tony), une par chauffeur et par mois.
+  `CREATE TABLE IF NOT EXISTS factures (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     mois TEXT NOT NULL,
+     partenaire_id INTEGER NOT NULL,
+     nom_fichier TEXT NOT NULL,
+     pdf BLOB NOT NULL,
+     cree_le TEXT NOT NULL DEFAULT (datetime('now')),
+     UNIQUE (mois, partenaire_id)
+   )`,
 ];
+
+const TAILLE_MAX_FACTURE = 1800 * 1024;
 
 // Colonnes ajoutees apres coup (ALTER TABLE echoue si elles existent deja).
 const COLONNES = [
@@ -428,13 +440,45 @@ export async function routePartenaires(request, env, url) {
   }
 
   // Bilan d'un mois (AAAA-MM).
+  // Factures du chauffeur connecte (il ne voit que les siennes).
+  if (sousChemin === "/mes-factures" && methode === "GET") {
+    const { results } = await env.DB.prepare(
+      `SELECT b.mois, b.montant, b.paye, f.id AS facture_id FROM budget b
+       LEFT JOIN factures f ON f.mois = b.mois AND f.partenaire_id = b.partenaire_id
+       WHERE b.partenaire_id = ?
+       UNION
+       SELECT f.mois, NULL, 0, f.id FROM factures f
+       WHERE f.partenaire_id = ? AND NOT EXISTS (SELECT 1 FROM budget b WHERE b.mois = f.mois AND b.partenaire_id = f.partenaire_id)
+       ORDER BY 1 DESC LIMIT 24`
+    ).bind(moi.id, moi.id).all();
+    return json({ ok: true, factures: (results || []).map((r) => ({ mois: r.mois, montant: r.montant, paye: !!r.paye, factureId: r.facture_id })) });
+  }
+
+  // PDF d'une facture : son chauffeur ou l'administrateur.
+  const pdf = sousChemin.match(/^\/factures\/(\d+)$/);
+  if (pdf && methode === "GET") {
+    const f = await env.DB.prepare("SELECT partenaire_id, nom_fichier, pdf FROM factures WHERE id = ?").bind(Number(pdf[1])).first();
+    if (!f || (!moi.admin && f.partenaire_id !== moi.id)) return json({ ok: false, error: "Facture introuvable." }, 404);
+    const octets = f.pdf instanceof ArrayBuffer ? new Uint8Array(f.pdf) : Array.isArray(f.pdf) ? Uint8Array.from(f.pdf) : new Uint8Array(f.pdf);
+    return new Response(octets, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${String(f.nom_fichier).replace(/[^\w.\- ]/g, "_")}"`,
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
   if (sousChemin === "/bilan" && methode === "GET") {
+    if (!moi.admin) return json({ ok: false, error: "Réservé à l'administrateur." }, 403);
     const mois = /^\d{4}-\d{2}$/.test(url.searchParams.get("mois") || "") ? url.searchParams.get("mois") : aujourdhuiParis().slice(0, 7);
     const { results: courses } = await env.DB.prepare(
       "SELECT prise_par, ajoutee_par, caree_par FROM courses WHERE date LIKE ? AND annulee = 0"
     ).bind(mois + "-%").all();
     const { results: parts } = await env.DB.prepare("SELECT id, nom, actif FROM partenaires ORDER BY id").all();
     const { results: budgets } = await env.DB.prepare("SELECT partenaire_id, montant, paye FROM budget WHERE mois = ?").bind(mois).all();
+    const { results: facts } = await env.DB.prepare("SELECT id, partenaire_id FROM factures WHERE mois = ?").bind(mois).all();
     const depense = await env.DB.prepare("SELECT montant FROM depenses WHERE mois = ?").bind(mois).first();
     const liste = courses || [];
     const parPartenaire = (parts || [])
@@ -446,10 +490,11 @@ export async function routePartenaires(request, env, url) {
           courses: liste.filter((c) => c.prise_par === p.id).length,
           budget: b ? b.montant : null,
           paye: b ? !!b.paye : false,
+          factureId: ((facts || []).find((x) => x.partenaire_id === p.id) || {}).id || null,
           actif: !!p.actif,
         };
       })
-      .filter((p) => p.actif || p.courses || p.budget != null);
+      .filter((p) => p.actif || p.courses || p.budget != null || p.factureId);
     const total = liste.length;
     const montant = depense ? depense.montant : null;
     return json({
@@ -505,6 +550,30 @@ export async function routePartenaires(request, env, url) {
     if (typeof b.peutAjouter === "boolean") await env.DB.prepare("UPDATE partenaires SET peut_ajouter = ? WHERE id = ?").bind(b.peutAjouter ? 1 : 0, id).run();
     if (typeof b.telephone === "string") await env.DB.prepare("UPDATE partenaires SET telephone = ? WHERE id = ?").bind(texte(b.telephone, 30) || null, id).run();
     if (typeof b.nom === "string" && texte(b.nom, 60)) await env.DB.prepare("UPDATE partenaires SET nom = ? WHERE id = ?").bind(texte(b.nom, 60), id).run();
+    return json({ ok: true });
+  }
+
+  // Joindre (ou remplacer) la facture PDF d'un chauffeur pour un mois.
+  // Corps : le fichier PDF brut ; mois et chauffeur dans l'adresse.
+  if (sousChemin === "/admin/factures" && methode === "POST") {
+    const mois = /^\d{4}-\d{2}$/.test(url.searchParams.get("mois") || "") ? url.searchParams.get("mois") : "";
+    const partenaireId = Number(url.searchParams.get("partenaire") || 0);
+    if (!mois || !partenaireId) return json({ ok: false, error: "Mois ou chauffeur manquant." }, 400);
+    const octets = new Uint8Array(await request.arrayBuffer());
+    if (!octets.length) return json({ ok: false, error: "Fichier vide." }, 400);
+    if (octets.length > TAILLE_MAX_FACTURE) return json({ ok: false, error: "PDF trop lourd (1,8 Mo maximum)." }, 413);
+    if (String.fromCharCode(...octets.slice(0, 5)) !== "%PDF-") return json({ ok: false, error: "Ce fichier n'est pas un PDF." }, 400);
+    const nom = texte(url.searchParams.get("nom") || "", 120) || `facture-${mois}.pdf`;
+    await env.DB.prepare(
+      `INSERT INTO factures (mois, partenaire_id, nom_fichier, pdf) VALUES (?, ?, ?, ?)
+       ON CONFLICT (mois, partenaire_id) DO UPDATE SET nom_fichier = excluded.nom_fichier, pdf = excluded.pdf, cree_le = datetime('now')`
+    ).bind(mois, partenaireId, nom, octets).run();
+    return json({ ok: true });
+  }
+
+  const supprFacture = sousChemin.match(/^\/admin\/factures\/(\d+)\/supprimer$/);
+  if (supprFacture && methode === "POST") {
+    await env.DB.prepare("DELETE FROM factures WHERE id = ?").bind(Number(supprFacture[1])).run();
     return json({ ok: true });
   }
 

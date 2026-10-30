@@ -176,3 +176,14 @@ button.p-part-tete { cursor: pointer; }
 .p-suggestions li span { display: block; font-size: 12px; color: var(--doux); margin-top: 2px; }
 .p-espace { margin-top: 8px; }
 .p-form input.p-invalide { border-color: var(--rouge); }
+
+/* Factures */
+.p-facture { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid #f0ebe0; }
+.p-facture-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.p-facture-txt b { color: var(--nuit); font-size: 14.5px; }
+.p-facture-txt span { font-size: 13px; }
+.p-facture-pdf { flex: none; border: 1.5px solid var(--trait); background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 800; color: var(--nuit); text-decoration: none; }
+.p-part-facture { border-top: 1px solid #f0ebe0; padding: 4px 0 10px; }
+.p-part-facture .p-part-budget { border-top: 0; }
+.p-part-pdf { display: flex; gap: 8px; align-items: center; }
+.p-part-pdf button { flex: 1; border: 1.5px solid var(--trait); background: #fff; border-radius: 10px; padding: 9px 10px; font-size: 13px; font-weight: 800; color: var(--nuit); cursor: pointer; }
