@@ -96,6 +96,9 @@ const SCHEMA = [
 const COLONNES = [
   "ALTER TABLE courses ADD COLUMN caree_par INTEGER",
   "ALTER TABLE courses ADD COLUMN caree_le TEXT",
+  // Cle du lien personnel gardee (partenaires seulement, jamais l'admin) pour
+  // pouvoir renvoyer le lien a un chauffeur qui l'a perdu.
+  "ALTER TABLE partenaires ADD COLUMN cle TEXT",
 ];
 
 let schemaPret = false;
@@ -466,8 +469,17 @@ export async function routePartenaires(request, env, url) {
   if (!moi.admin) return json({ ok: false, error: "Réservé à l'administrateur." }, 403);
 
   if (sousChemin === "/admin/partenaires" && methode === "GET") {
-    const { results } = await env.DB.prepare("SELECT id, nom, telephone, admin, peut_ajouter, actif FROM partenaires ORDER BY id").all();
-    return json({ ok: true, partenaires: (results || []).map((p) => ({ ...p, admin: !!p.admin, peut_ajouter: !!p.peut_ajouter, actif: !!p.actif })) });
+    const { results } = await env.DB.prepare("SELECT id, nom, telephone, admin, peut_ajouter, actif, cle FROM partenaires ORDER BY id").all();
+    return json({
+      ok: true,
+      partenaires: (results || []).map(({ cle, ...p }) => ({
+        ...p,
+        admin: !!p.admin,
+        peut_ajouter: !!p.peut_ajouter,
+        actif: !!p.actif,
+        lien: cle && !p.admin ? `${url.origin}/partenaires/entrer?cle=${cle}` : null,
+      })),
+    });
   }
 
   if (sousChemin === "/admin/partenaires" && methode === "POST") {
@@ -475,8 +487,8 @@ export async function routePartenaires(request, env, url) {
     const nom = texte(b.nom, 60);
     if (!nom) return json({ ok: false, error: "Nom obligatoire." }, 400);
     const cle = nouvelleCle();
-    await env.DB.prepare("INSERT INTO partenaires (nom, telephone, cle_hash, peut_ajouter) VALUES (?, ?, ?, ?)")
-      .bind(nom, texte(b.telephone, 30) || null, await sha256(cle), b.peutAjouter ? 1 : 0).run();
+    await env.DB.prepare("INSERT INTO partenaires (nom, telephone, cle_hash, cle, peut_ajouter) VALUES (?, ?, ?, ?, ?)")
+      .bind(nom, texte(b.telephone, 30) || null, await sha256(cle), cle, b.peutAjouter ? 1 : 0).run();
     return json({ ok: true, lien: `${url.origin}/partenaires/entrer?cle=${cle}` });
   }
 
@@ -486,7 +498,7 @@ export async function routePartenaires(request, env, url) {
     const b = await lireCorps(request);
     if (b.nouveauLien) {
       const cle = nouvelleCle();
-      await env.DB.prepare("UPDATE partenaires SET cle_hash = ? WHERE id = ? AND admin = 0").bind(await sha256(cle), id).run();
+      await env.DB.prepare("UPDATE partenaires SET cle_hash = ?, cle = ? WHERE id = ? AND admin = 0").bind(await sha256(cle), cle, id).run();
       return json({ ok: true, lien: `${url.origin}/partenaires/entrer?cle=${cle}` });
     }
     if (typeof b.actif === "boolean") await env.DB.prepare("UPDATE partenaires SET actif = ? WHERE id = ? AND admin = 0").bind(b.actif ? 1 : 0, id).run();

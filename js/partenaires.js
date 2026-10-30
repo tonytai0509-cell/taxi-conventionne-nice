@@ -384,35 +384,74 @@
     z.appendChild(ligne);
   }
 
+  function copierLien(lien) {
+    (navigator.clipboard ? navigator.clipboard.writeText(lien) : Promise.reject()).then(function () { message("Lien copié."); }, function () { prompt("Copiez le lien :", lien); });
+  }
+
+  function lienWhatsApp(p, lien) {
+    var numero = String(p.telephone || "").replace(/\D/g, "").replace(/^0(\d{9})$/, "33$1");
+    return "https://wa.me/" + numero + "?text=" + encodeURIComponent("Ton accès à l'espace partenaires Google Ads de la Centrale Taxi Nice : " + lien);
+  }
+
+  // Interrupteur « actif » / « peut ajouter des courses ».
+  function interrupteur(texte, actif, changer) {
+    var l = el("label", "p-inter");
+    var c = el("input");
+    c.type = "checkbox";
+    c.checked = actif;
+    c.addEventListener("change", function () { changer(c.checked); });
+    l.appendChild(c);
+    l.appendChild(el("span", "p-inter-rond"));
+    l.appendChild(el("span", "p-inter-texte", texte));
+    return l;
+  }
+
   function chargerPartenaires() {
     var zone = $("pListePartenaires");
     api("GET", "/admin/partenaires").then(function (r) {
       zone.textContent = "";
       r.partenaires.forEach(function (p) {
-        var d = el("div", "p-partenaire");
-        d.appendChild(el("div", "nom", p.nom + (p.admin ? " (vous, admin)" : "") + (p.actif ? "" : " · désactivé")));
-        d.appendChild(el("div", "det", [p.telephone ? "📞 " + p.telephone : "pas de téléphone", p.peut_ajouter ? "peut ajouter des courses" : ""].filter(Boolean).join(" · ")));
-        if (!p.admin) {
-          var act = el("div", "act");
-          function bouton(texte, corps, apres) {
-            var b = el("button", null, texte);
-            b.addEventListener("click", function () {
-              api("POST", "/admin/partenaires/" + p.id, corps).then(function (res) { if (apres) apres(res); chargerPartenaires(); }).catch(function (e) { message(e.message); });
-            });
-            act.appendChild(b);
-          }
-          bouton(p.actif ? "Désactiver" : "Réactiver", { actif: !p.actif });
-          bouton(p.peut_ajouter ? "Retirer l'ajout de courses" : "Autoriser l'ajout de courses", { peutAjouter: !p.peut_ajouter });
-          bouton("Nouveau lien", { nouveauLien: true }, function (res) { afficherLien(p.nom, res.lien); message("L'ancien lien ne marche plus."); });
-          var tel = el("button", null, "Téléphone");
-          tel.addEventListener("click", function () {
-            var t = prompt("Téléphone de " + p.nom + " :", p.telephone || "");
-            if (t === null) return;
-            api("POST", "/admin/partenaires/" + p.id, { telephone: t }).then(chargerPartenaires).catch(function (e) { message(e.message); });
-          });
-          act.appendChild(tel);
-          d.appendChild(act);
+        var d = el("div", "p-partenaire" + (p.actif ? "" : " inactif"));
+        var tete = el("div", "p-part-tete");
+        tete.appendChild(el("div", "nom", p.nom + (p.admin ? " (vous)" : "")));
+        tete.appendChild(el("div", "det", p.telephone ? "📞 " + p.telephone : "pas de téléphone"));
+        d.appendChild(tete);
+        if (p.admin) { zone.appendChild(d); return; }
+        function modifier(corps, apres) {
+          return api("POST", "/admin/partenaires/" + p.id, corps).then(function (res) { if (apres) apres(res); chargerPartenaires(); }).catch(function (e) { message(e.message); chargerPartenaires(); });
         }
+        var inters = el("div", "p-inters");
+        inters.appendChild(interrupteur("Accès actif", p.actif, function (v) { modifier({ actif: v }); }));
+        inters.appendChild(interrupteur("Peut ajouter des courses", p.peut_ajouter, function (v) { modifier({ peutAjouter: v }); }));
+        d.appendChild(inters);
+
+        var grille = el("div", "p-part-boutons");
+        function bouton(texte, action, classe) {
+          var b = el("button", classe || null, texte);
+          b.type = "button";
+          b.addEventListener("click", action);
+          grille.appendChild(b);
+        }
+        if (p.lien) {
+          bouton("📋 Copier le lien", function () { copierLien(p.lien); });
+          bouton("💬 Envoyer sur WhatsApp", function () { window.open(lienWhatsApp(p, p.lien), "_blank", "noopener"); });
+        } else {
+          // Lien cree avant que le site le garde : il faut en refaire un.
+          bouton("🔗 Créer un lien à copier", function () {
+            if (!confirm("L'ancien lien de " + p.nom + " ne marchera plus. Continuer ?")) return;
+            modifier({ nouveauLien: true }, function (res) { copierLien(res.lien); });
+          }, "large");
+        }
+        bouton("✏️ Téléphone", function () {
+          var t = prompt("Téléphone de " + p.nom + " :", p.telephone || "");
+          if (t === null) return;
+          modifier({ telephone: t });
+        });
+        bouton("🔄 Nouveau lien", function () {
+          if (!confirm("Créer un nouveau lien pour " + p.nom + " ? L'ancien ne marchera plus.")) return;
+          modifier({ nouveauLien: true }, function () { message("Nouveau lien créé : l'ancien ne marche plus."); });
+        });
+        d.appendChild(grille);
         zone.appendChild(d);
       });
     }).catch(function () {});
@@ -479,9 +518,6 @@
         r.appendChild(lab);
         zone.appendChild(r);
       });
-    }).catch(function () {});
-    api("GET", "/admin/clients").then(function (r) {
-      $("pNbClients").textContent = r.nombre + " numéro(s) de clients enregistré(s).";
     }).catch(function () {});
   }
 
@@ -582,7 +618,6 @@
       if (!numeros.trim()) return;
       api("POST", "/admin/clients", { numeros: numeros }).then(function (r) {
         $("pNumeros").value = "";
-        $("pNbClients").textContent = r.nombre + " numéro(s) de clients enregistré(s).";
         message(r.ajoutes + " numéro(s) traité(s).");
       }).catch(function (e) { message(e.message); });
     });
