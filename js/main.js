@@ -24,12 +24,33 @@
     var lien = e.target.closest && e.target.closest('a[href^="#"]');
     if (!lien) return;
     var id = lien.getAttribute("href").slice(1);
-    var cible = id && document.getElementById(id);
+    var cible = cibleAncre(id);
     if (!cible) return;
     e.preventDefault();
     cible.scrollIntoView({ behavior: "smooth", block: "start" });
     if (history.replaceState) history.replaceState(null, "", "#" + id);
   });
+
+  // « #reserver » mene directement au formulaire (« Qui reserve ? ») et non au
+  // titre de la section : arrives par le QR code, les clients ne voyaient pas
+  // qu'il fallait descendre.
+  function cibleAncre(id) {
+    if (id === "reserver") return document.getElementById("reserveForm") || document.getElementById(id);
+    return id ? document.getElementById(id) : null;
+  }
+  if (location.hash === "#reserver") {
+    var aBouge = false;
+    var bouge = function () { aBouge = true; };
+    ["touchstart", "wheel", "keydown"].forEach(function (t) { window.addEventListener(t, bouge, { passive: true, once: true }); });
+    var placer = function () {
+      var f = cibleAncre("reserver");
+      if (f && !aBouge) f.scrollIntoView({ block: "start" });
+    };
+    // Une fois tout de suite, puis apres le chargement des images (la page
+    // s'allonge et decale le formulaire).
+    requestAnimationFrame(placer);
+    window.addEventListener("load", function () { setTimeout(placer, 50); });
+  }
 
   // Origine du visiteur, gardee 30 jours sur ce telephone : pub Google Ads
   // (gclid / gbraid / wbraid ou utm cpc) ou QR code / cartes de Tony (?src=qr).
