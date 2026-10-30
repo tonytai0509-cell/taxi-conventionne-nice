@@ -409,9 +409,8 @@ export async function routePartenaires(request, env, url) {
       nom: texte(b.nom, 120),
       telephone: texte(b.telephone, 30),
       commentaire: texte(b.commentaire, 500),
-      // Seul l'administrateur peut garder une course : un partenaire qui en
-      // ajoute une la met forcement au dispatch.
-      garder: !!b.garder && moi.admin,
+      // Plus de « Je la garde » : toute course ajoutee part au dispatch (Caree).
+      garder: false,
     };
     if (!c.date || !c.depart || !c.destination || (!c.heurePc && !c.heureRdv)) {
       return json({ ok: false, error: "Date, heure, départ et destination sont obligatoires." }, 400);

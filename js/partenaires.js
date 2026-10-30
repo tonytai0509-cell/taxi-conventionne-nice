@@ -519,7 +519,6 @@
         type: form.querySelector("input[name=type]:checked").value,
         nom: f.nom.value, telephone: f.telephone.value, depart: f.depart.value, destination: f.destination.value,
         date: f.date.value, heurePc: f.heurePc.value, heureRdv: f.heureRdv.value, commentaire: f.commentaire.value,
-        garder: moi.admin && !!form.querySelector("input[name=garder]:checked").value,
       }).then(function () {
         fenetre.hidden = true;
         jour = f.date.value;
@@ -581,10 +580,6 @@
       $("pOngletGestion").hidden = !moi.admin;
       $("pOngletMes").hidden = !moi.admin;
       if (moi.admin) $("pOnglets").classList.add("cinq");
-      // « Je la garde » : administrateur seul. Un partenaire qui ajoute une
-      // course la met forcement au dispatch.
-      $("pQuiLabel").hidden = !moi.admin;
-      $("pQuiChoix").hidden = !moi.admin;
       brancher();
       changerVue("jour");
     })
