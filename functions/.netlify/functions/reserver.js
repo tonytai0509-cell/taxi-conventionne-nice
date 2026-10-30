@@ -28,6 +28,7 @@
 // "TEL :", etc. via un champ comme le nom ou la destination) et le tronque
 // a une longueur raisonnable.
 import { relaisConfigure, lienConfirmationSms } from "../../confirmerSms.js";
+import { origineReservation, ajouterReservationAds } from "../../partenaires.js";
 
 function nettoyerTexte(valeur, longueurMax) {
   if (typeof valeur !== "string") return "";
@@ -227,6 +228,9 @@ function mailReservationHtml(d, reference, lienRelais = null) {
   const pastille = (texte, fond, encre) =>
     `<span style="display:inline-block;margin:0 6px 6px 0;padding:5px 12px;border-radius:999px;background:${fond};color:${encre};font-size:12px;font-weight:800">${texte}</span>`;
   const options = [
+    d.origine === "ads" ? pastille("🎯 GOOGLE ADS · espace partenaires", "#1D4ED8", "#FFFFFF") : "",
+    d.origine === "qr" ? pastille("🔳 QR code / vos cartes", "#F1F1F1", "#444") : "",
+    d.origine === "client_tony" ? pastille("⭐ Votre client (via Google Ads)", "#FFF4DE", "#9A6A00") : "",
     d.type === "medical" ? pastille("🏥 Transport médical", "#E6EEF9", "#1D4ED8") : pastille("🚕 Course privée", "#F1F1F1", "#444"),
     d.accompagnant ? pastille("👥 Accompagnant", "#FFF4DE", "#9A6A00") : "",
     d.btoRetour ? pastille("📄 Bon de transport au retour", "#FFF4DE", "#9A6A00") : "",
@@ -312,6 +316,7 @@ async function envoyerEmailConfirmation(env, donnees, reference) {
     (donnees.telephone2 ? `Autre numero : ${donnees.telephone2}\n` : "") +
     (donnees.reservePar ? `Reserve par : ${donnees.reservePar}${donnees.telReservant ? " - " + donnees.telReservant : ""}\n` : "") +
     (donnees.commentaire ? `Commentaire : ${donnees.commentaire}\n` : "") +
+    (donnees.origine === "ads" ? "Origine : GOOGLE ADS (espace partenaires)\n" : "") +
     `Reference : ${reference}\n`;
   const sujet = `🚕 ${dateCourte(donnees.date)} · ${donnees.pcADefinir ? "PC à définir (RDV " + donnees.heureRdv.replace(":", "h") + ")" : heurePriseEnCharge.replace(":", "h")} · ${donnees.nom} → ${donnees.destination}`;
 
@@ -530,8 +535,18 @@ export async function onRequestPost(context) {
     commentaire: nettoyerTexte(body.commentaire, 500),
   };
 
+  // Tri : pub Google Ads (client inconnu) -> espace partenaires ; QR code,
+  // anciens clients, recherche Google -> agenda de Tony.
+  donnees.origine = await origineReservation(env, body.origine, telephone).catch(() => "site");
+  let versPartenaires = null;
+  if (donnees.origine === "ads") {
+    versPartenaires = await ajouterReservationAds(env, donnees, reference).catch((e) => ({ ok: false, raison: String(e && e.message) }));
+  }
+
   const [resultatAgenda, resultatEmail] = await Promise.all([
-    envoyerVersEasyTaxi(env, body, donnees).then((r) => (r.ok ? r : creerEvenementAgenda(env, donnees, reference))),
+    versPartenaires && versPartenaires.ok
+      ? Promise.resolve({ ok: true, partenaires: true })
+      : envoyerVersEasyTaxi(env, body, donnees).then((r) => (r.ok ? r : creerEvenementAgenda(env, donnees, reference))),
     envoyerEmailConfirmation(env, donnees, reference),
   ]);
 

@@ -1,0 +1,463 @@
+// Espace partenaires (taxi-conventionne06.fr/partenaires) : les reservations
+// venues d'une pub Google Ads, partagees entre les chauffeurs qui financent
+// la pub. Base Cloudflare D1 (binding DB, voir wrangler.jsonc).
+//
+// Acces : chaque partenaire a un lien personnel (…/partenaires/entrer?cle=…)
+// cree par l'administrateur ; il pose un cookie valable un an. Le premier
+// acces administrateur se fait avec la cle PARTENAIRES_CLE_ADMIN (secret
+// Cloudflare choisi par Tony).
+//
+// Tri des reservations (voir origineReservation) : seules celles venues de
+// Google Ads, d'un client qui n'est pas dans la liste des clients de Tony,
+// arrivent ici. QR code, anciens clients, recherche Google : a Tony seul.
+//
+// Donnees de sante : nom et telephone du client ne sont montres qu'au
+// chauffeur qui a pris la course (et a l'admin), et effaces 30 jours apres
+// la date de la course.
+
+const COOKIE = "partenaire";
+const DUREE_COOKIE_S = 365 * 24 * 3600;
+const JOURS_CONSERVATION_CLIENT = 30;
+
+const SCHEMA = [
+  `CREATE TABLE IF NOT EXISTS partenaires (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     nom TEXT NOT NULL,
+     telephone TEXT,
+     cle_hash TEXT NOT NULL UNIQUE,
+     admin INTEGER NOT NULL DEFAULT 0,
+     peut_ajouter INTEGER NOT NULL DEFAULT 0,
+     actif INTEGER NOT NULL DEFAULT 1,
+     cree_le TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  `CREATE TABLE IF NOT EXISTS courses (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     reference TEXT,
+     date TEXT NOT NULL,
+     heure_pc TEXT,
+     heure_rdv TEXT,
+     type TEXT NOT NULL DEFAULT 'medical',
+     depart TEXT NOT NULL,
+     destination TEXT NOT NULL,
+     client_nom TEXT,
+     client_tel TEXT,
+     telephone2 TEXT,
+     commentaire TEXT,
+     options TEXT,
+     origine TEXT NOT NULL DEFAULT 'site',
+     ajoutee_par INTEGER,
+     prise_par INTEGER,
+     prise_le TEXT,
+     annulee INTEGER NOT NULL DEFAULT 0,
+     cree_le TEXT NOT NULL DEFAULT (datetime('now'))
+   )`,
+  `CREATE INDEX IF NOT EXISTS idx_courses_date ON courses (date)`,
+  `CREATE TABLE IF NOT EXISTS clients_tony (telephone TEXT PRIMARY KEY)`,
+  `CREATE TABLE IF NOT EXISTS budget (
+     mois TEXT NOT NULL,
+     partenaire_id INTEGER NOT NULL,
+     montant REAL NOT NULL DEFAULT 0,
+     paye INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (mois, partenaire_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS depenses (mois TEXT PRIMARY KEY, montant REAL NOT NULL DEFAULT 0)`,
+];
+
+let schemaPret = false;
+async function preparer(db) {
+  if (schemaPret) return;
+  for (const sql of SCHEMA) await db.prepare(sql).run();
+  schemaPret = true;
+}
+
+export function partenairesActifs(env) {
+  return !!(env.DB && typeof env.DB.prepare === "function");
+}
+
+// ---------------------------------------------------------------------------
+// Outils
+// ---------------------------------------------------------------------------
+
+async function sha256(texte) {
+  const octets = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texte)));
+  return [...octets].map((o) => o.toString(16).padStart(2, "0")).join("");
+}
+
+function nouvelleCle() {
+  const octets = crypto.getRandomValues(new Uint8Array(18));
+  let s = "";
+  for (const o of octets) s += String.fromCharCode(o);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+// Numero francais compare sur ses 9 derniers chiffres (06…, +336…, 336…).
+export function telephoneCle(t) {
+  const chiffres = String(t || "").replace(/\D/g, "");
+  return chiffres.length >= 9 ? chiffres.slice(-9) : "";
+}
+
+function texte(v, max) {
+  return typeof v === "string" ? v.replace(/[\r\n\t\x00-\x1f\x7f]+/g, " ").trim().slice(0, max) : "";
+}
+
+function json(corps, statut = 200, entetes = {}) {
+  return new Response(JSON.stringify(corps), {
+    status: statut,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...entetes },
+  });
+}
+
+function lireCookie(request, nom) {
+  const brut = request.headers.get("Cookie") || "";
+  for (const morceau of brut.split(";")) {
+    const [k, ...v] = morceau.trim().split("=");
+    if (k === nom) return decodeURIComponent(v.join("="));
+  }
+  return "";
+}
+
+function cookieSession(cle) {
+  return `${COOKIE}=${encodeURIComponent(cle)}; Path=/; Max-Age=${DUREE_COOKIE_S}; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function aujourdhuiParis() {
+  return new Intl.DateTimeFormat("fr-CA", { timeZone: "Europe/Paris" }).format(new Date());
+}
+
+function decalerJours(iso, n) {
+  const d = new Date(iso + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function partenaireConnecte(request, env) {
+  const cle = lireCookie(request, COOKIE);
+  if (!cle) return null;
+  return env.DB.prepare("SELECT id, nom, admin, peut_ajouter FROM partenaires WHERE cle_hash = ? AND actif = 1")
+    .bind(await sha256(cle))
+    .first();
+}
+
+// ---------------------------------------------------------------------------
+// Tri des reservations du site
+// ---------------------------------------------------------------------------
+
+// "ads" seulement si le visiteur est arrive par une pub Google (marque posee
+// par js/main.js) ET que son numero n'est pas dans la liste des clients de Tony.
+export async function origineReservation(env, origineDeclaree, telephone) {
+  if (origineDeclaree !== "ads") return origineDeclaree === "qr" ? "qr" : "site";
+  if (!partenairesActifs(env)) return "ads";
+  await preparer(env.DB);
+  const cle = telephoneCle(telephone);
+  if (cle) {
+    const connu = await env.DB.prepare("SELECT 1 FROM clients_tony WHERE telephone = ?").bind(cle).first();
+    if (connu) return "client_tony";
+  }
+  return "ads";
+}
+
+// Reservation Google Ads du site : ajoutee a l'espace partenaires (libre),
+// SMS aux partenaires par le telephone relais.
+export async function ajouterReservationAds(env, d, reference) {
+  if (!partenairesActifs(env)) return { ok: false, raison: "espace partenaires non configure" };
+  await preparer(env.DB);
+  const options = [d.accompagnant ? "Accompagnant" : "", d.btoRetour ? "Bon de transport au retour" : ""].filter(Boolean).join(", ");
+  const r = await env.DB.prepare(
+    `INSERT INTO courses (reference, date, heure_pc, heure_rdv, type, depart, destination, client_nom, client_tel, telephone2, commentaire, options, origine)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ads')`
+  )
+    .bind(reference, d.date, d.pcADefinir ? null : d.heurePc || null, d.heureRdv || null, d.type, d.priseEnCharge, d.destination,
+      d.nom, d.telephone, d.telephone2 || null, d.commentaire || null, options || null)
+    .run();
+  await prevenirPartenaires(env, { date: d.date, heure: d.pcADefinir ? null : d.heurePc, depart: d.priseEnCharge, destination: d.destination });
+  return { ok: true, id: r.meta && r.meta.last_row_id };
+}
+
+function versInternational(numero) {
+  const brut = String(numero || "").replace(/[^0-9+]/g, "");
+  if (brut.startsWith("+")) return brut;
+  if (brut.startsWith("0") && brut.length === 10) return "+33" + brut.slice(1);
+  return brut;
+}
+
+async function prevenirPartenaires(env, c, saufId = null) {
+  if (!env.SMS_GATEWAY_USERNAME || !env.SMS_GATEWAY_PASSWORD) return;
+  const { results } = await env.DB.prepare("SELECT id, telephone FROM partenaires WHERE actif = 1 AND telephone IS NOT NULL AND telephone <> ''").all();
+  const numeros = (results || []).filter((p) => p.id !== saufId).map((p) => versInternational(p.telephone)).filter((n) => n.length >= 10);
+  if (!numeros.length) return;
+  const [, m, j] = c.date.split("-");
+  const ville = (a) => (String(a).match(/\d{5}\s+([^,]+)/) || [])[1] || String(a).split(",")[0];
+  const message = `🚕 Nouvelle course Google Ads libre : ${j}/${m}${c.heure ? " " + c.heure.replace(":", "h") : ""}, ${ville(c.depart)} → ${c.destination}. Pour la prendre : taxi-conventionne06.fr/partenaires`;
+  try {
+    await fetch("https://api.sms-gate.app/3rdparty/v1/messages?skipPhoneValidation=true", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${env.SMS_GATEWAY_USERNAME}:${env.SMS_GATEWAY_PASSWORD}`)}` },
+      body: JSON.stringify({ textMessage: { text: message }, phoneNumbers: numeros, priority: 50 }),
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (e) {
+    // Notification de confort : l'echec n'empeche pas la reservation.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// API de la page /partenaires
+// ---------------------------------------------------------------------------
+
+function vueCourse(c, moi, noms) {
+  const visible = moi.admin || c.prise_par === moi.id;
+  return {
+    id: c.id,
+    date: c.date,
+    heurePc: c.heure_pc,
+    heureRdv: c.heure_rdv,
+    type: c.type,
+    depart: c.depart,
+    destination: c.destination,
+    options: c.options,
+    commentaire: c.commentaire,
+    origine: c.origine,
+    parTelephone: c.ajoutee_par != null,
+    ajouteePar: c.ajoutee_par != null ? noms[c.ajoutee_par] || "?" : null,
+    prisePar: c.prise_par != null ? (c.prise_par === moi.id ? "vous" : noms[c.prise_par] || "?") : null,
+    priseParMoi: c.prise_par === moi.id,
+    annulee: !!c.annulee,
+    client: visible ? { nom: c.client_nom, telephone: c.client_tel, telephone2: c.telephone2 } : null,
+  };
+}
+
+async function nomsPartenaires(db) {
+  const { results } = await db.prepare("SELECT id, nom FROM partenaires").all();
+  return Object.fromEntries((results || []).map((p) => [p.id, p.nom]));
+}
+
+async function lireCorps(request) {
+  try {
+    const t = await request.text();
+    return t.length > 20000 ? {} : JSON.parse(t || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+export async function routePartenaires(request, env, url) {
+  if (!partenairesActifs(env)) {
+    return json({ ok: false, error: "Espace partenaires pas encore configuré (base D1 manquante)." }, 503);
+  }
+  await preparer(env.DB);
+  const chemin = url.pathname.replace(/\/+$/, "");
+  const methode = request.method;
+
+  // Purge des coordonnees des clients une fois la course passee.
+  if (Math.random() < 0.05) {
+    await env.DB.prepare("UPDATE courses SET client_nom = NULL, client_tel = NULL, telephone2 = NULL WHERE date < ? AND client_nom IS NOT NULL")
+      .bind(decalerJours(aujourdhuiParis(), -JOURS_CONSERVATION_CLIENT))
+      .run();
+  }
+
+  // Entree par lien personnel : pose le cookie et ouvre la page.
+  if (chemin === "/partenaires/entrer" && methode === "GET") {
+    const cle = url.searchParams.get("cle") || "";
+    let ok = false;
+    if (cle && env.PARTENAIRES_CLE_ADMIN && cle === env.PARTENAIRES_CLE_ADMIN) {
+      // Premier acces de l'administrateur : cree (ou retrouve) son compte.
+      const h = await sha256(cle);
+      const existe = await env.DB.prepare("SELECT id FROM partenaires WHERE cle_hash = ?").bind(h).first();
+      if (!existe) await env.DB.prepare("INSERT INTO partenaires (nom, cle_hash, admin, peut_ajouter) VALUES ('Tony', ?, 1, 1)").bind(h).run();
+      ok = true;
+    } else if (cle) {
+      ok = !!(await env.DB.prepare("SELECT id FROM partenaires WHERE cle_hash = ? AND actif = 1").bind(await sha256(cle)).first());
+    }
+    if (!ok) return new Response(null, { status: 302, headers: { Location: "/partenaires?lien=invalide" } });
+    return new Response(null, { status: 302, headers: { Location: "/partenaires", "Set-Cookie": cookieSession(cle), "Cache-Control": "no-store" } });
+  }
+
+  if (!chemin.startsWith("/api/partenaires")) return null;
+  const moi = await partenaireConnecte(request, env);
+  if (!moi) return json({ ok: false, error: "Non connecté" }, 401);
+  moi.admin = !!moi.admin;
+  moi.peut_ajouter = !!moi.peut_ajouter;
+  const sousChemin = chemin.slice("/api/partenaires".length) || "/";
+
+  if (sousChemin === "/moi" && methode === "GET") {
+    return json({ ok: true, nom: moi.nom, admin: moi.admin, peutAjouter: moi.admin || moi.peut_ajouter });
+  }
+
+  if (sousChemin === "/deconnexion" && methode === "POST") {
+    return json({ ok: true }, 200, { "Set-Cookie": `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax` });
+  }
+
+  // Liste des courses sur une periode (par defaut : aujourd'hui).
+  if (sousChemin === "/courses" && methode === "GET") {
+    const debut = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("debut") || "") ? url.searchParams.get("debut") : aujourdhuiParis();
+    let fin = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("fin") || "") ? url.searchParams.get("fin") : debut;
+    if (fin < debut) fin = debut;
+    if (fin > decalerJours(debut, 62)) fin = decalerJours(debut, 62);
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM courses WHERE date >= ? AND date <= ? ORDER BY date, COALESCE(heure_pc, heure_rdv), id"
+    ).bind(debut, fin).all();
+    const noms = await nomsPartenaires(env.DB);
+    return json({ ok: true, debut, fin, courses: (results || []).map((c) => vueCourse(c, moi, noms)) });
+  }
+
+  const action = sousChemin.match(/^\/courses\/(\d+)\/(prendre|liberer|annuler)$/);
+  if (action && methode === "POST") {
+    const id = Number(action[1]);
+    if (action[2] === "prendre") {
+      const r = await env.DB.prepare("UPDATE courses SET prise_par = ?, prise_le = datetime('now') WHERE id = ? AND prise_par IS NULL AND annulee = 0")
+        .bind(moi.id, id).run();
+      if (!r.meta || !r.meta.changes) return json({ ok: false, error: "Trop tard : cette course vient d'être prise." }, 409);
+      return json({ ok: true });
+    }
+    if (action[2] === "liberer") {
+      const r = await env.DB.prepare(`UPDATE courses SET prise_par = NULL, prise_le = NULL WHERE id = ? AND ${moi.admin ? "1 = 1" : "prise_par = ?"}`)
+        .bind(...(moi.admin ? [id] : [id, moi.id])).run();
+      if (!r.meta || !r.meta.changes) return json({ ok: false, error: "Vous ne pouvez pas libérer cette course." }, 403);
+      const c = await env.DB.prepare("SELECT date, heure_pc, depart, destination FROM courses WHERE id = ?").bind(id).first();
+      if (c) await prevenirPartenaires(env, { date: c.date, heure: c.heure_pc, depart: c.depart, destination: c.destination }, moi.id);
+      return json({ ok: true });
+    }
+    if (!moi.admin) return json({ ok: false, error: "Réservé à l'administrateur." }, 403);
+    await env.DB.prepare("UPDATE courses SET annulee = 1 - annulee WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+
+  // Course recue par telephone (client venu par la pub).
+  if (sousChemin === "/courses" && methode === "POST") {
+    if (!moi.admin && !moi.peut_ajouter) return json({ ok: false, error: "Vous ne pouvez pas ajouter de course." }, 403);
+    const b = await lireCorps(request);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(b.date || "") ? b.date : "";
+    const heure = (h) => (/^\d{2}:\d{2}$/.test(h || "") ? h : null);
+    const c = {
+      date,
+      heurePc: heure(b.heurePc),
+      heureRdv: heure(b.heureRdv),
+      type: b.type === "prive" ? "prive" : "medical",
+      depart: texte(b.depart, 160),
+      destination: texte(b.destination, 160),
+      nom: texte(b.nom, 120),
+      telephone: texte(b.telephone, 30),
+      commentaire: texte(b.commentaire, 500),
+      garder: !!b.garder,
+    };
+    if (!c.date || !c.depart || !c.destination || (!c.heurePc && !c.heureRdv)) {
+      return json({ ok: false, error: "Date, heure, départ et destination sont obligatoires." }, 400);
+    }
+    const r = await env.DB.prepare(
+      `INSERT INTO courses (date, heure_pc, heure_rdv, type, depart, destination, client_nom, client_tel, commentaire, origine, ajoutee_par, prise_par, prise_le)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ads', ?, ?, ${c.garder ? "datetime('now')" : "NULL"})`
+    ).bind(c.date, c.heurePc, c.heureRdv, c.type, c.depart, c.destination, c.nom || null, c.telephone || null, c.commentaire || null,
+      moi.id, c.garder ? moi.id : null).run();
+    if (!c.garder) await prevenirPartenaires(env, { date: c.date, heure: c.heurePc, depart: c.depart, destination: c.destination }, moi.id);
+    return json({ ok: true, id: r.meta && r.meta.last_row_id });
+  }
+
+  // Bilan d'un mois (AAAA-MM).
+  if (sousChemin === "/bilan" && methode === "GET") {
+    const mois = /^\d{4}-\d{2}$/.test(url.searchParams.get("mois") || "") ? url.searchParams.get("mois") : aujourdhuiParis().slice(0, 7);
+    const { results: courses } = await env.DB.prepare(
+      "SELECT prise_par, ajoutee_par FROM courses WHERE date LIKE ? AND annulee = 0"
+    ).bind(mois + "-%").all();
+    const { results: parts } = await env.DB.prepare("SELECT id, nom, actif FROM partenaires ORDER BY id").all();
+    const { results: budgets } = await env.DB.prepare("SELECT partenaire_id, montant, paye FROM budget WHERE mois = ?").bind(mois).all();
+    const depense = await env.DB.prepare("SELECT montant FROM depenses WHERE mois = ?").bind(mois).first();
+    const liste = courses || [];
+    const parPartenaire = (parts || [])
+      .map((p) => {
+        const b = (budgets || []).find((x) => x.partenaire_id === p.id);
+        return {
+          id: p.id,
+          nom: p.nom,
+          courses: liste.filter((c) => c.prise_par === p.id).length,
+          budget: b ? b.montant : null,
+          paye: b ? !!b.paye : false,
+          actif: !!p.actif,
+        };
+      })
+      .filter((p) => p.actif || p.courses || p.budget != null);
+    const total = liste.length;
+    const montant = depense ? depense.montant : null;
+    return json({
+      ok: true,
+      mois,
+      total,
+      parTelephone: liste.filter((c) => c.ajoutee_par != null).length,
+      nonPrises: liste.filter((c) => c.prise_par == null).length,
+      depense: montant,
+      coutParCourse: montant != null && total ? Math.round((montant / total) * 100) / 100 : null,
+      partenaires: parPartenaire,
+    });
+  }
+
+  // ----- Administration (Tony) -----
+  if (!moi.admin) return json({ ok: false, error: "Réservé à l'administrateur." }, 403);
+
+  if (sousChemin === "/admin/partenaires" && methode === "GET") {
+    const { results } = await env.DB.prepare("SELECT id, nom, telephone, admin, peut_ajouter, actif FROM partenaires ORDER BY id").all();
+    return json({ ok: true, partenaires: (results || []).map((p) => ({ ...p, admin: !!p.admin, peut_ajouter: !!p.peut_ajouter, actif: !!p.actif })) });
+  }
+
+  if (sousChemin === "/admin/partenaires" && methode === "POST") {
+    const b = await lireCorps(request);
+    const nom = texte(b.nom, 60);
+    if (!nom) return json({ ok: false, error: "Nom obligatoire." }, 400);
+    const cle = nouvelleCle();
+    await env.DB.prepare("INSERT INTO partenaires (nom, telephone, cle_hash, peut_ajouter) VALUES (?, ?, ?, ?)")
+      .bind(nom, texte(b.telephone, 30) || null, await sha256(cle), b.peutAjouter ? 1 : 0).run();
+    return json({ ok: true, lien: `${url.origin}/partenaires/entrer?cle=${cle}` });
+  }
+
+  const modif = sousChemin.match(/^\/admin\/partenaires\/(\d+)$/);
+  if (modif && methode === "POST") {
+    const id = Number(modif[1]);
+    const b = await lireCorps(request);
+    if (b.nouveauLien) {
+      const cle = nouvelleCle();
+      await env.DB.prepare("UPDATE partenaires SET cle_hash = ? WHERE id = ? AND admin = 0").bind(await sha256(cle), id).run();
+      return json({ ok: true, lien: `${url.origin}/partenaires/entrer?cle=${cle}` });
+    }
+    if (typeof b.actif === "boolean") await env.DB.prepare("UPDATE partenaires SET actif = ? WHERE id = ? AND admin = 0").bind(b.actif ? 1 : 0, id).run();
+    if (typeof b.peutAjouter === "boolean") await env.DB.prepare("UPDATE partenaires SET peut_ajouter = ? WHERE id = ?").bind(b.peutAjouter ? 1 : 0, id).run();
+    if (typeof b.telephone === "string") await env.DB.prepare("UPDATE partenaires SET telephone = ? WHERE id = ?").bind(texte(b.telephone, 30) || null, id).run();
+    if (typeof b.nom === "string" && texte(b.nom, 60)) await env.DB.prepare("UPDATE partenaires SET nom = ? WHERE id = ?").bind(texte(b.nom, 60), id).run();
+    return json({ ok: true });
+  }
+
+  if (sousChemin === "/admin/budget" && methode === "POST") {
+    const b = await lireCorps(request);
+    const mois = /^\d{4}-\d{2}$/.test(b.mois || "") ? b.mois : "";
+    if (!mois) return json({ ok: false, error: "Mois invalide." }, 400);
+    if (b.depense !== undefined) {
+      const m = Number(b.depense);
+      if (!Number.isFinite(m) || m < 0) return json({ ok: false, error: "Montant invalide." }, 400);
+      await env.DB.prepare("INSERT INTO depenses (mois, montant) VALUES (?, ?) ON CONFLICT (mois) DO UPDATE SET montant = excluded.montant").bind(mois, m).run();
+    }
+    if (b.partenaireId !== undefined) {
+      const m = Number(b.montant);
+      await env.DB.prepare(
+        `INSERT INTO budget (mois, partenaire_id, montant, paye) VALUES (?, ?, ?, ?)
+         ON CONFLICT (mois, partenaire_id) DO UPDATE SET montant = excluded.montant, paye = excluded.paye`
+      ).bind(mois, Number(b.partenaireId), Number.isFinite(m) && m >= 0 ? m : 0, b.paye ? 1 : 0).run();
+    }
+    return json({ ok: true });
+  }
+
+  if (sousChemin === "/admin/clients" && methode === "GET") {
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM clients_tony").first();
+    return json({ ok: true, nombre: n ? n.n : 0 });
+  }
+
+  // Liste des clients de Tony (numeros colles en vrac) : leurs reservations
+  // ne vont jamais a l'espace partenaires.
+  if (sousChemin === "/admin/clients" && methode === "POST") {
+    const b = await lireCorps(request);
+    const cles = [...new Set(String(b.numeros || "").split(/[\n,;]+/).map(telephoneCle).filter(Boolean))].slice(0, 5000);
+    for (let i = 0; i < cles.length; i += 50) {
+      await env.DB.batch(cles.slice(i, i + 50).map((c) => env.DB.prepare("INSERT OR IGNORE INTO clients_tony (telephone) VALUES (?)").bind(c)));
+    }
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM clients_tony").first();
+    return json({ ok: true, ajoutes: cles.length, nombre: n ? n.n : 0 });
+  }
+
+  return json({ ok: false, error: "Introuvable" }, 404);
+}

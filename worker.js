@@ -7,6 +7,7 @@
 
 import { onRequestPost } from "./functions/.netlify/functions/reserver.js";
 import { CHEMIN_CONFIRMER_SMS, pageConfirmerSms } from "./functions/confirmerSms.js";
+import { routePartenaires } from "./functions/partenaires.js";
 
 const CHEMIN_RESERVATION = "/.netlify/functions/reserver";
 
@@ -88,6 +89,14 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (!HOTES_EASYTAXI.includes(url.hostname) && (url.pathname === "/partenaires/entrer" || url.pathname.startsWith("/api/partenaires"))) {
+      const reponse = await routePartenaires(request, env, url);
+      if (reponse) return avecEntetesSecurite(reponse);
+    }
+    // Fichiers internes du Worker : jamais servis comme pages du site.
+    if (/^\/(functions|worker\.js|wrangler\.jsonc)/.test(url.pathname)) {
+      return avecEntetesSecurite(new Response("Introuvable", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } }));
+    }
     if (url.pathname === CHEMIN_CONFIRMER_SMS && !HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await pageConfirmerSms(request, env));
     if (url.pathname === "/api/adresses" && !HOTES_EASYTAXI.includes(url.hostname)) return avecEntetesSecurite(await suggestionsAdresses(url));
 

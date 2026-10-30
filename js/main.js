@@ -31,6 +31,26 @@
     if (history.replaceState) history.replaceState(null, "", "#" + id);
   });
 
+  // Origine du visiteur, gardee 30 jours sur ce telephone : pub Google Ads
+  // (gclid / gbraid / wbraid ou utm cpc) ou QR code / cartes de Tony (?src=qr).
+  // Sert a trier les reservations (espace partenaires ou Tony).
+  (function () {
+    try {
+      var p = new URLSearchParams(location.search);
+      var origine = null;
+      if (p.get("src") === "qr") origine = "qr";
+      else if (p.get("gclid") || p.get("gbraid") || p.get("wbraid") || (p.get("utm_source") === "google" && /cpc|ads|paid/.test(p.get("utm_medium") || ""))) origine = "ads";
+      if (origine) localStorage.setItem("origineVisite", JSON.stringify({ o: origine, t: Date.now() }));
+    } catch (e) {}
+  })();
+  function origineVisite() {
+    try {
+      var v = JSON.parse(localStorage.getItem("origineVisite") || "null");
+      if (v && Date.now() - v.t < 30 * 24 * 3600 * 1000) return v.o;
+    } catch (e) {}
+    return "site";
+  }
+
   // Gold progress bar under the header, filling left-to-right with scroll depth,
   // with a lit-fuse spark glowing at the advancing tip
   var headerProgressFill = document.getElementById("headerProgressFill");
@@ -377,6 +397,7 @@
         telReservant: data.get("qui") === "pro" ? data.get("telReservant") || "" : "",
         telephone2: data.get("telephone2") || "",
         commentaire: data.get("commentaire") || "",
+        origine: origineVisite(),
       };
 
       if (boutonEnvoyer) boutonEnvoyer.disabled = true;
