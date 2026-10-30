@@ -187,3 +187,67 @@ button.p-part-tete { cursor: pointer; }
 .p-part-facture .p-part-budget { border-top: 0; }
 .p-part-pdf { display: flex; gap: 8px; align-items: center; }
 .p-part-pdf button { flex: 1; border: 1.5px solid var(--trait); background: #fff; border-radius: 10px; padding: 9px 10px; font-size: 13px; font-weight: 800; color: var(--nuit); cursor: pointer; }
+
+/* ===== Gestion : rubriques repliables ===== */
+#vGestion { padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
+.p-rub { background: #fff; border: 1px solid #ece6d8; border-radius: 16px; box-shadow: 0 1px 4px rgba(11, 31, 58, .05); overflow: hidden; }
+.p-rub-tete { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: none; padding: 13px 14px; text-align: left; cursor: pointer; color: var(--nuit); font: inherit; }
+.p-rub-icone { flex: none; width: 36px; height: 36px; border-radius: 10px; background: #f6f1e4; color: var(--nuit); display: flex; align-items: center; justify-content: center; }
+.p-rub-icone svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.p-rub-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.p-rub-txt b { font-size: 15px; font-weight: 800; line-height: 1.25; }
+.p-rub-txt span { font-size: 12.5px; color: var(--doux); line-height: 1.3; overflow-wrap: anywhere; }
+.p-rub-etat { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 800; }
+.p-rub-etat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.p-rub-etat.ok { color: var(--vert); }
+.p-rub-etat.off { color: var(--doux); }
+.p-rub-etat:empty { display: none; }
+.p-chevron { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--nuit); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.p-rub.ouverte .p-chevron { transform: rotate(180deg); }
+.p-rub-corps { padding: 2px 14px 14px; border-top: 1px solid #f0ebe0; }
+.p-rub-label { display: block; font-weight: 700; font-size: 12.5px; color: var(--nuit); margin: 12px 0 6px; }
+.p-bouton-ajout { margin-top: 12px; padding: 12px; font-size: 14px; }
+.p-sous-form { margin-top: 10px; }
+.p-sous-form .p-ligne input { min-width: 0; }
+
+/* Partenaires : liste compacte */
+.p-pers { border-bottom: 1px solid #f0ebe0; }
+.p-pers:last-child { border-bottom: 0; }
+.p-pers-tete { display: flex; align-items: center; gap: 12px; padding: 11px 0; cursor: pointer; }
+.p-pers:first-child .p-pers-tete { padding-top: 12px; }
+.p-avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; background: #e4ecf7; color: var(--nuit); font-weight: 800; font-size: 17px; display: flex; align-items: center; justify-content: center; }
+.p-avatar.admin { background: #f3e6c4; }
+.p-pers-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.p-pers-txt b { font-size: 15px; color: var(--nuit); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.p-pers-txt > span { font-size: 12.5px; color: var(--doux); }
+.p-pers.inactif .p-avatar, .p-pers.inactif .p-pers-txt { opacity: .5; }
+.p-badge { font-size: 11px; font-weight: 800; background: #fbf0d4; color: #8a6400; border-radius: 999px; padding: 2px 8px; }
+.p-pers-tel { flex: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--nuit); }
+.p-pers-tel:active { background: #f6f1e4; }
+.p-ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.p-ico-suivant { color: var(--doux); transition: transform .15s; }
+.p-pers.ouverte .p-ico-suivant, .p-fact.ouverte .p-ico-suivant { transform: rotate(90deg); }
+.p-part-options { padding: 0 0 12px; }
+.p-part-options .p-inters { margin-top: 0; }
+
+/* Budget : une ligne par partenaire */
+.p-fact { border-top: 1px solid #f0ebe0; }
+.p-fact-tete { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 11px 0; text-align: left; cursor: pointer; font: inherit; color: var(--nuit); }
+.p-fact-tete b { flex: 1; min-width: 0; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-fact-montant { flex: none; font-weight: 800; font-size: 14px; }
+.p-statut { flex: none; font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 3px 9px; }
+.p-statut.paye { background: #e3f4e8; color: var(--vert); }
+.p-statut.du { background: #fbe7e4; color: var(--rouge); }
+.p-statut.vide { background: #f1efe9; color: var(--doux); }
+.p-fact-det { padding: 0 0 12px; }
+.p-fact-ligne { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+.p-fact-ligne input { flex: 1; min-width: 0; }
+.p-fact-ligne .p-inter { flex: none; }
+
+/* Mes clients */
+.p-recherche { margin-top: 12px; }
+.p-clients { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; max-height: 240px; overflow-y: auto; }
+.p-client-num { border: 1px solid var(--trait); border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 700; color: var(--nuit); text-decoration: none; background: #fbf9f4; }
+#pClientsAjout textarea { margin-top: 10px; }
+#vGestion input[type=search], #vGestion input[type=number], #vGestion input[type=tel], #vGestion select { width: 100%; background: #fff; border: 1.5px solid var(--trait); border-radius: 11px; padding: 10px 12px; font-size: 15px; color: #222; min-width: 0; }
+.p-bouton.p-bouton-sec { background: #fff; border: 1.5px solid var(--trait); color: var(--doux); }

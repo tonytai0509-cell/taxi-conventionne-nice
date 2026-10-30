@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261108" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261109" />
 </head>
 <body>
   <header class="p-haut">
@@ -79,39 +79,72 @@
     </section>
 
     <section id="vGestion" hidden>
-      <div class="p-bloc">
-        <h3>SMS des réservations</h3>
-        <p class="p-petit" id="pSmsActuel"></p>
-        <select id="pSmsChauffeur" class="p-select" aria-label="Choisir le chauffeur qui a la ligne"></select>
-        <p class="p-petit">ou tapez un numéro :</p>
-        <div class="p-ligne"><input id="pSmsNumero" type="tel" placeholder="06 …" maxlength="30" /><button class="p-bouton p-bouton-petit" id="pSmsOk" type="button">Enregistrer</button></div>
-      </div>
-      <div class="p-bloc">
-        <h3>Partenaires</h3>
-        <div id="pListePartenaires"></div>
-        <form id="pFormPartenaire" class="p-form">
-          <label>Nouveau partenaire</label>
-          <div class="p-ligne"><input name="nom" placeholder="Prénom" required maxlength="60" /><input name="telephone" type="tel" placeholder="06 …" maxlength="30" /></div>
-          <label class="p-case"><input type="checkbox" name="peutAjouter" /> Peut ajouter des courses reçues par téléphone</label>
-          <button class="p-bouton" type="submit">Créer son lien personnel</button>
-        </form>
-        <div id="pLienCree" class="p-lien" hidden></div>
-      </div>
-      <div class="p-bloc">
-        <h3>Budget Google Ads</h3>
-        <div class="p-nav-jour p-nav-petit">
-          <button id="pBudgetAvant" aria-label="Mois précédent">‹</button>
-          <div id="pBudgetMois"></div>
-          <button id="pBudgetApres" aria-label="Mois suivant">›</button>
+      <!-- Quatre rubriques repliables ; une seule ouverte a la fois. -->
+      <div class="p-rub" id="rubSms">
+        <button class="p-rub-tete" type="button" aria-expanded="false">
+          <span class="p-rub-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 3.5V17H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M7.5 9.5h9M7.5 12.5h6"/></svg></span>
+          <span class="p-rub-txt"><b>Réception des réservations</b><span id="pSmsResume"></span></span>
+          <span class="p-rub-etat" id="pSmsEtat"></span><svg class="p-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="p-rub-corps" hidden>
+          <label class="p-rub-label" for="pSmsChauffeur">Chauffeur qui a la ligne</label>
+          <select id="pSmsChauffeur" class="p-select"></select>
+          <label class="p-rub-label" for="pSmsNumero">Ou un autre numéro</label>
+          <div class="p-ligne"><input id="pSmsNumero" type="tel" placeholder="06 …" maxlength="30" /><button class="p-bouton p-bouton-petit" id="pSmsOk" type="button">Enregistrer</button></div>
         </div>
-        <label>Dépensé dans Google Ads ce mois-ci (€)</label>
-        <div class="p-ligne"><input id="pDepense" type="number" min="0" step="0.01" inputmode="decimal" /><button class="p-bouton p-bouton-petit" id="pDepenseOk">Enregistrer</button></div>
-        <div id="pParts"></div>
       </div>
-      <div class="p-bloc">
-        <h3>Mes clients</h3>
-        <textarea id="pNumeros" rows="5" placeholder="06 12 34 56 78&#10;07 98 76 54 32"></textarea>
-        <button class="p-bouton" id="pNumerosOk">Ajouter à ma liste</button>
+
+      <div class="p-rub" id="rubPartenaires">
+        <button class="p-rub-tete" type="button" aria-expanded="false">
+          <span class="p-rub-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.2c2.4.2 4 1.8 4.5 4.3"/></svg></span>
+          <span class="p-rub-txt"><b>Partenaires</b><span id="pPartResume"></span></span>
+          <svg class="p-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="p-rub-corps" hidden>
+          <div id="pListePartenaires"></div>
+          <button class="p-bouton p-bouton-ajout" id="pAjouterPartenaire" type="button">＋ Ajouter un partenaire</button>
+          <form id="pFormPartenaire" class="p-form p-sous-form" hidden>
+            <div class="p-ligne"><input name="nom" placeholder="Prénom" required maxlength="60" /><input name="telephone" type="tel" placeholder="06 …" maxlength="30" /></div>
+            <label class="p-case"><input type="checkbox" name="peutAjouter" /> Peut ajouter des courses reçues par téléphone</label>
+            <button class="p-bouton" type="submit">Créer son lien personnel</button>
+          </form>
+          <div id="pLienCree" class="p-lien" hidden></div>
+        </div>
+      </div>
+
+      <div class="p-rub" id="rubBudget">
+        <button class="p-rub-tete" type="button" aria-expanded="false">
+          <span class="p-rub-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6H18a1 1 0 0 1 1 1v2"/><rect x="3.5" y="8.5" width="17" height="10.5" rx="1.8"/><path d="M15.5 13.75h5"/><circle cx="16.8" cy="13.75" r=".6"/></svg></span>
+          <span class="p-rub-txt"><b>Budget et factures</b><span id="pBudgetResume"></span></span>
+          <svg class="p-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="p-rub-corps" hidden>
+          <div class="p-nav-jour p-nav-petit">
+            <button id="pBudgetAvant" type="button" aria-label="Mois précédent">‹</button>
+            <div id="pBudgetMois"></div>
+            <button id="pBudgetApres" type="button" aria-label="Mois suivant">›</button>
+          </div>
+          <label class="p-rub-label" for="pDepense">Dépensé dans Google Ads (€)</label>
+          <div class="p-ligne"><input id="pDepense" type="number" min="0" step="0.01" inputmode="decimal" /><button class="p-bouton p-bouton-petit" id="pDepenseOk" type="button">Enregistrer</button></div>
+          <div id="pParts"></div>
+        </div>
+      </div>
+
+      <div class="p-rub" id="rubClients">
+        <button class="p-rub-tete" type="button" aria-expanded="false">
+          <span class="p-rub-icone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="1.8"/><circle cx="12" cy="10" r="2.6"/><path d="M8 17c.5-2.2 2-3.4 4-3.4s3.5 1.2 4 3.4"/><path d="M3.5 7.5h3M3.5 12h3M3.5 16.5h3"/></svg></span>
+          <span class="p-rub-txt"><b>Mes clients</b><span id="pClientsResume"></span></span>
+          <svg class="p-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="p-rub-corps" hidden>
+          <input id="pClientsRecherche" type="search" class="p-recherche" placeholder="Rechercher un numéro…" inputmode="tel" autocomplete="off" />
+          <div id="pClientsListe" class="p-clients"></div>
+          <button class="p-bouton p-bouton-ajout" id="pAjouterClients" type="button">＋ Ajouter des clients</button>
+          <div id="pClientsAjout" hidden>
+            <textarea id="pNumeros" rows="5" placeholder="06 12 34 56 78&#10;07 98 76 54 32"></textarea>
+            <button class="p-bouton" id="pNumerosOk" type="button">Ajouter à ma liste</button>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -148,6 +181,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261108"></script>
+  <script src="/js/partenaires.js?v=20261109"></script>
 </body>
 </html>

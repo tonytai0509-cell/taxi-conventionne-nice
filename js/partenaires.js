@@ -439,29 +439,49 @@
     var zone = $("pListePartenaires");
     api("GET", "/admin/partenaires").then(function (r) {
       zone.textContent = "";
+      var n = r.partenaires.length;
+      $("pPartResume").textContent = n + " partenaire" + (n > 1 ? "s" : "");
       r.partenaires.forEach(function (p) {
-        var d = el("div", "p-partenaire" + (p.actif ? "" : " inactif"));
-        var tete = el(p.admin ? "div" : "button", "p-part-tete");
-        tete.appendChild(el("span", "nom", p.nom + (p.admin ? " (vous)" : "") + (p.actif ? "" : " · désactivé")));
-        tete.appendChild(el("span", "det", p.telephone ? "📞 " + p.telephone : "pas de téléphone"));
+        var d = el("div", "p-pers" + (p.actif ? "" : " inactif"));
+        var tete = el("div", "p-pers-tete");
+        var avatar = el("span", "p-avatar" + (p.admin ? " admin" : ""), (p.nom || "?").charAt(0).toUpperCase());
+        tete.appendChild(avatar);
+        var txt = el("span", "p-pers-txt");
+        var nom = el("b", null, p.nom);
+        if (p.admin) nom.appendChild(el("span", "p-badge", "Vous"));
+        txt.appendChild(nom);
+        txt.appendChild(el("span", null, (p.admin ? "Administrateur" : "Partenaire") + (p.actif ? "" : " · désactivé")));
+        tete.appendChild(txt);
+        if (p.telephone) {
+          var tel = el("a", "p-pers-tel");
+          tel.href = "tel:" + p.telephone.replace(/[^0-9+]/g, "");
+          tel.setAttribute("aria-label", "Appeler " + p.nom);
+          tel.appendChild(icone("tel"));
+          tel.addEventListener("click", function (e) { e.stopPropagation(); });
+          tete.appendChild(tel);
+        }
         d.appendChild(tete);
         if (p.admin) { zone.appendChild(d); return; }
-        // Options repliees : on touche le nom pour les afficher.
+        tete.appendChild(icone("suivant"));
+        tete.setAttribute("role", "button");
+        tete.tabIndex = 0;
+
+        // Options du partenaire : affichees au toucher.
         var cle = "p" + p.id;
-        tete.type = "button";
-        tete.appendChild(el("span", "p-repli-fleche", "▾"));
-        tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
         var options = el("div", "p-part-options");
         options.hidden = !ouvertes[cle];
         d.classList.toggle("ouverte", !!ouvertes[cle]);
-        tete.addEventListener("click", function () {
+        tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+        function basculer() {
           ouvertes[cle] = !ouvertes[cle];
           options.hidden = !ouvertes[cle];
           d.classList.toggle("ouverte", !!ouvertes[cle]);
           tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
-        });
+        }
+        tete.addEventListener("click", basculer);
+        tete.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); basculer(); } });
         function modifier(corps, apres) {
-          return api("POST", "/admin/partenaires/" + p.id, corps).then(function (res) { if (apres) apres(res); chargerPartenaires(); }).catch(function (e) { message(e.message); chargerPartenaires(); });
+          return api("POST", "/admin/partenaires/" + p.id, corps).then(function (res) { if (apres) apres(res); chargerPartenaires(); chargerSms(); }).catch(function (e) { message(e.message); chargerPartenaires(); });
         }
         var inters = el("div", "p-inters");
         inters.appendChild(interrupteur("Accès actif", p.actif, function (v) { modifier({ actif: v }); }));
@@ -470,14 +490,14 @@
 
         var grille = el("div", "p-part-boutons");
         function bouton(texte, action, classe) {
-          var b = el("button", classe || null, texte);
-          b.type = "button";
-          b.addEventListener("click", action);
-          grille.appendChild(b);
+          var bt = el("button", classe || null, texte);
+          bt.type = "button";
+          bt.addEventListener("click", action);
+          grille.appendChild(bt);
         }
         if (p.lien) {
           bouton("📋 Copier le lien", function () { copierLien(p.lien); });
-          bouton("💬 Envoyer sur WhatsApp", function () { window.open(lienWhatsApp(p, p.lien), "_blank", "noopener"); });
+          bouton("💬 WhatsApp", function () { window.open(lienWhatsApp(p, p.lien), "_blank", "noopener"); });
         } else {
           // Lien cree avant que le site le garde : il faut en refaire un.
           bouton("🔗 Créer un lien à copier", function () {
@@ -501,11 +521,30 @@
     }).catch(function () {});
   }
 
+  // Petites icones (traits) : telephone, fleche.
+  function icone(nom) {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("class", "p-ico p-ico-" + nom);
+    var path = document.createElementNS(ns, "path");
+    path.setAttribute("d", nom === "tel"
+      ? "M6.6 3.5h2.6l1.4 4-2 1.6a12 12 0 0 0 6.3 6.3l1.6-2 4 1.4v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2z"
+      : "M9 6l6 6-6 6");
+    svg.appendChild(path);
+    return svg;
+  }
+
   // Ligne de permanence : le seul numero qui recoit les SMS des reservations.
   function chargerSms() {
     Promise.all([api("GET", "/admin/sms"), api("GET", "/admin/partenaires")]).then(function (r) {
       $("pSmsNumero").value = r[0].numero || "";
-      $("pSmsActuel").textContent = r[0].numero ? "Les SMS partent actuellement au " + r[0].numero + "." : "Aucun numéro : personne ne reçoit de SMS.";
+      var qui = r[1].partenaires.filter(function (p) { return p.telephone && telephoneCle(p.telephone) === telephoneCle(r[0].numero); })[0];
+      $("pSmsResume").textContent = r[0].numero ? "SMS envoyés à " + (qui ? qui.nom : r[0].numero) : "Aucun numéro : pas de SMS";
+      var etat = $("pSmsEtat");
+      etat.textContent = r[0].numero ? "Actif" : "Inactif";
+      etat.className = "p-rub-etat " + (r[0].numero ? "ok" : "off");
       // Liste deroulante des chauffeurs qui ont un numero.
       var choix = $("pSmsChauffeur");
       choix.textContent = "";
@@ -537,33 +576,48 @@
   function chargerBudget() {
     $("pBudgetMois").textContent = titreMois(moisBudget);
     api("GET", "/bilan?mois=" + moisBudget).then(function (b) {
+      var t = titreMois(moisBudget);
+      $("pBudgetResume").textContent = t.charAt(0).toUpperCase() + t.slice(1) + " · " + (b.depense == null ? "dépense non saisie" : euros(b.depense) + " dépensés");
       $("pDepense").value = b.depense == null ? "" : b.depense;
       var zone = $("pParts");
       zone.textContent = "";
-      zone.appendChild(el("p", "p-petit", "Facture de chacun pour ce mois :"));
+      zone.appendChild(el("div", "p-rub-label", "Factures du mois"));
       b.partenaires.forEach(function (p) {
-        var bloc = el("div", "p-part-facture");
-        var r = el("div", "p-part-budget");
-        r.appendChild(el("span", null, p.nom));
+        var cle = "b" + moisBudget + p.id;
+        var d = el("div", "p-fact" + (ouvertes[cle] ? " ouverte" : ""));
+        var tete = el("button", "p-fact-tete");
+        tete.type = "button";
+        tete.appendChild(el("b", null, p.nom));
+        tete.appendChild(el("span", "p-fact-montant", p.budget == null ? "—" : euros(p.budget)));
+        tete.appendChild(el("span", "p-statut " + (p.budget == null ? "vide" : p.paye ? "paye" : "du"), p.budget == null ? "Pas de montant" : p.paye ? "Payé" : "À régler"));
+        tete.appendChild(icone("suivant"));
+        tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+        var det = el("div", "p-fact-det");
+        det.hidden = !ouvertes[cle];
+        tete.addEventListener("click", function () {
+          ouvertes[cle] = !ouvertes[cle];
+          det.hidden = !ouvertes[cle];
+          d.classList.toggle("ouverte", !!ouvertes[cle]);
+          tete.setAttribute("aria-expanded", ouvertes[cle] ? "true" : "false");
+        });
+        d.appendChild(tete);
+
+        // Detail : montant, statut, facture PDF.
+        var ligne1 = el("div", "p-fact-ligne");
         var montant = el("input");
-        montant.type = "number"; montant.min = "0"; montant.step = "0.01"; montant.inputMode = "decimal"; montant.placeholder = "€";
+        montant.type = "number"; montant.min = "0"; montant.step = "0.01"; montant.inputMode = "decimal"; montant.placeholder = "Montant €";
+        montant.setAttribute("aria-label", "Montant de " + p.nom);
         montant.value = p.budget == null ? "" : p.budget;
-        var lab = el("label");
-        var paye = el("input");
-        paye.type = "checkbox"; paye.checked = p.paye;
-        lab.appendChild(paye);
-        lab.appendChild(document.createTextNode("payé"));
+        var payeInter = interrupteur("Payé", p.paye, enregistrer);
         function enregistrer() {
-          api("POST", "/admin/budget", { mois: moisBudget, partenaireId: p.id, montant: Number(montant.value || 0), paye: paye.checked })
-            .then(function () { message("Enregistré."); }).catch(function (e) { message(e.message); });
+          api("POST", "/admin/budget", { mois: moisBudget, partenaireId: p.id, montant: Number(montant.value || 0), paye: payeInter.querySelector("input").checked })
+            .then(function () { message("Enregistré."); chargerBudget(); }).catch(function (e) { message(e.message); });
         }
         montant.addEventListener("change", enregistrer);
-        paye.addEventListener("change", enregistrer);
-        r.appendChild(montant);
-        r.appendChild(lab);
-        bloc.appendChild(r);
+        ligne1.appendChild(montant);
+        ligne1.appendChild(payeInter);
+        det.appendChild(ligne1);
 
-        // PDF de la facture : joindre / remplacer / ouvrir.
         var ligne = el("div", "p-part-pdf");
         var fichier = el("input");
         fichier.type = "file";
@@ -587,10 +641,57 @@
         ligne.appendChild(joindre);
         ligne.appendChild(fichier);
         if (p.factureId) ligne.appendChild(lienFacture(p.factureId));
-        bloc.appendChild(ligne);
-        zone.appendChild(bloc);
+        det.appendChild(ligne);
+        d.appendChild(det);
+        zone.appendChild(d);
       });
     }).catch(function () {});
+  }
+
+  // ----- Mes clients : liste avec recherche -----
+  var numerosClients = [];
+  function formaterNumero(cle) {
+    var n = "0" + cle;
+    return n.length === 10 ? n.replace(/(\d{2})(?=\d)/g, "$1 ").trim() : cle;
+  }
+
+  function afficherClients() {
+    var zone = $("pClientsListe");
+    var q = $("pClientsRecherche").value.replace(/\D/g, "").replace(/^0/, "");
+    var liste = numerosClients.filter(function (c) { return !q || c.indexOf(q) !== -1; });
+    zone.textContent = "";
+    if (!numerosClients.length) { zone.appendChild(el("p", "p-petit", "Aucun client enregistré.")); return; }
+    if (!liste.length) { zone.appendChild(el("p", "p-petit", "Aucun numéro ne correspond.")); return; }
+    liste.slice(0, 200).forEach(function (c) {
+      var a = el("a", "p-client-num", formaterNumero(c));
+      a.href = "tel:0" + c;
+      zone.appendChild(a);
+    });
+    if (liste.length > 200) zone.appendChild(el("p", "p-petit", "… et " + (liste.length - 200) + " autres : affinez la recherche."));
+  }
+
+  function chargerClients() {
+    api("GET", "/admin/clients").then(function (r) {
+      numerosClients = r.numeros || [];
+      $("pClientsResume").textContent = r.nombre ? r.nombre + " client" + (r.nombre > 1 ? "s" : "") + " enregistré" + (r.nombre > 1 ? "s" : "") : "Aucun client enregistré";
+      afficherClients();
+    }).catch(function () {});
+  }
+
+  // ----- Gestion : rubriques repliables, une seule ouverte a la fois -----
+  function brancherRubriques() {
+    var rubriques = document.querySelectorAll("#vGestion .p-rub");
+    Array.prototype.forEach.call(rubriques, function (rub) {
+      rub.querySelector(".p-rub-tete").addEventListener("click", function () {
+        var ouvrir = !rub.classList.contains("ouverte");
+        Array.prototype.forEach.call(rubriques, function (autre) {
+          var o = ouvrir && autre === rub;
+          autre.classList.toggle("ouverte", o);
+          autre.querySelector(".p-rub-corps").hidden = !o;
+          autre.querySelector(".p-rub-tete").setAttribute("aria-expanded", o ? "true" : "false");
+        });
+      });
+    });
   }
 
   // ----- Formulaire d'ajout : suggestions d'adresses et heures au clavier -----
@@ -666,7 +767,7 @@
     if (vueActive === "semaine") chargerSemaine();
     if (vueActive === "bilan") chargerBilan();
     if (vueActive === "mes") chargerMes();
-    if (vueActive === "gestion") { chargerSms(); chargerPartenaires(); chargerBudget(); }
+    if (vueActive === "gestion") { chargerSms(); chargerPartenaires(); chargerBudget(); chargerClients(); }
   }
 
   function changerVue(v) {
@@ -743,14 +844,34 @@
     });
 
     // Gestion.
+    brancherRubriques();
+    $("pAjouterPartenaire").addEventListener("click", function () {
+      var f = $("pFormPartenaire");
+      f.hidden = !f.hidden;
+      $("pAjouterPartenaire").textContent = f.hidden ? "＋ Ajouter un partenaire" : "Fermer le formulaire";
+      $("pAjouterPartenaire").classList.toggle("p-bouton-sec", !f.hidden);
+      if (!f.hidden) f.elements.nom.focus();
+    });
+    $("pAjouterClients").addEventListener("click", function () {
+      var z = $("pClientsAjout");
+      z.hidden = !z.hidden;
+      $("pAjouterClients").textContent = z.hidden ? "＋ Ajouter des clients" : "Fermer";
+      $("pAjouterClients").classList.toggle("p-bouton-sec", !z.hidden);
+      if (!z.hidden) $("pNumeros").focus();
+    });
+    $("pClientsRecherche").addEventListener("input", afficherClients);
     $("pFormPartenaire").addEventListener("submit", function (e) {
       e.preventDefault();
       var f = e.target.elements;
       var nom = f.nom.value;
       api("POST", "/admin/partenaires", { nom: nom, telephone: f.telephone.value, peutAjouter: f.peutAjouter.checked }).then(function (r) {
         e.target.reset();
+        e.target.hidden = true;
+        $("pAjouterPartenaire").textContent = "＋ Ajouter un partenaire";
+        $("pAjouterPartenaire").classList.remove("p-bouton-sec");
         afficherLien(nom, r.lien);
         chargerPartenaires();
+        chargerSms();
       }).catch(function (err) { message(err.message); });
     });
     $("pSmsOk").addEventListener("click", function () { enregistrerSms($("pSmsNumero").value.trim()); });
@@ -759,7 +880,7 @@
       if (o && o.value) enregistrerSms(o.value, o.getAttribute("data-nom"));
     });
     $("pDepenseOk").addEventListener("click", function () {
-      api("POST", "/admin/budget", { mois: moisBudget, depense: Number($("pDepense").value || 0) }).then(function () { message("Dépense enregistrée."); }).catch(function (e) { message(e.message); });
+      api("POST", "/admin/budget", { mois: moisBudget, depense: Number($("pDepense").value || 0) }).then(function () { message("Dépense enregistrée."); chargerBudget(); }).catch(function (e) { message(e.message); });
     });
     $("pNumerosOk").addEventListener("click", function () {
       var numeros = $("pNumeros").value;
@@ -767,6 +888,7 @@
       api("POST", "/admin/clients", { numeros: numeros }).then(function (r) {
         $("pNumeros").value = "";
         message(r.ajoutes + " numéro(s) traité(s).");
+        chargerClients();
       }).catch(function (e) { message(e.message); });
     });
   }

@@ -647,8 +647,9 @@ export async function routePartenaires(request, env, url) {
   }
 
   if (sousChemin === "/admin/clients" && methode === "GET") {
-    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM clients_tony").first();
-    return json({ ok: true, nombre: n ? n.n : 0 });
+    const { results } = await env.DB.prepare("SELECT telephone FROM clients_tony ORDER BY telephone").all();
+    const numeros = (results || []).map((r) => r.telephone);
+    return json({ ok: true, nombre: numeros.length, numeros });
   }
 
   // Liste des clients de Tony (numeros colles en vrac) : leurs reservations
