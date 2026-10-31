@@ -90,6 +90,8 @@ const SCHEMA = [
    )`,
   `CREATE INDEX IF NOT EXISTS idx_mes_courses_date ON mes_courses (date)`,
   `CREATE TABLE IF NOT EXISTS reglages (cle TEXT PRIMARY KEY, valeur TEXT)`,
+  // Essais du code administrateur, par adresse IP (5 erreurs -> 15 min d'attente).
+  `CREATE TABLE IF NOT EXISTS essais_admin (ip TEXT PRIMARY KEY, erreurs INTEGER NOT NULL DEFAULT 0, depuis TEXT NOT NULL)`,
   // Factures mensuelles (PDF joints par Tony), une par chauffeur et par mois.
   `CREATE TABLE IF NOT EXISTS factures (
      id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -407,6 +409,30 @@ export async function routePartenaires(request, env, url) {
     }
     if (!ok) return new Response(null, { status: 302, headers: { Location: "/partenaires?lien=invalide" } });
     return new Response(null, { status: 302, headers: { Location: "/partenaires", "Set-Cookie": cookieSession(cle), "Cache-Control": "no-store" } });
+  }
+
+  // Connexion administrateur en tapant le code sur la page (sans le mettre
+  // dans un lien : marche meme avec #, &, + ou espaces dans le mot de passe).
+  if (chemin === "/api/partenaires/connexion-admin" && methode === "POST") {
+    const ip = request.headers.get("CF-Connecting-IP") || "inconnue";
+    const essai = await env.DB.prepare("SELECT erreurs, depuis FROM essais_admin WHERE ip = ? AND depuis > datetime('now', '-15 minutes')").bind(ip).first();
+    if (essai && essai.erreurs >= 5) return json({ ok: false, error: "Trop d'essais. Réessayez dans 15 minutes." }, 429);
+    const b = await lireCorps(request);
+    const code = typeof b.code === "string" ? b.code : "";
+    const bon = !!env.PARTENAIRES_CLE_ADMIN && code.length > 0 && (await sha256(code)) === (await sha256(env.PARTENAIRES_CLE_ADMIN));
+    if (!bon) {
+      await env.DB.prepare(
+        `INSERT INTO essais_admin (ip, erreurs, depuis) VALUES (?, 1, datetime('now'))
+         ON CONFLICT (ip) DO UPDATE SET erreurs = CASE WHEN depuis > datetime('now', '-15 minutes') THEN erreurs + 1 ELSE 1 END,
+           depuis = CASE WHEN depuis > datetime('now', '-15 minutes') THEN depuis ELSE datetime('now') END`
+      ).bind(ip).run();
+      return json({ ok: false, error: "Code incorrect." }, 403);
+    }
+    await env.DB.prepare("DELETE FROM essais_admin WHERE ip = ?").bind(ip).run();
+    const h = await sha256(code);
+    const existe = await env.DB.prepare("SELECT id FROM partenaires WHERE cle_hash = ?").bind(h).first();
+    if (!existe) await env.DB.prepare("INSERT INTO partenaires (nom, cle_hash, admin, peut_ajouter) VALUES ('Tony', ?, 1, 1)").bind(h).run();
+    return json({ ok: true }, 200, { "Set-Cookie": cookieSession(code) });
   }
 
   if (!chemin.startsWith("/api/partenaires")) return null;

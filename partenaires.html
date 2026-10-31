@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261117" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261118" />
 </head>
 <body>
   <header class="p-haut">
@@ -30,6 +30,16 @@
     <h2>Espace partenaires</h2>
     <p id="pConnexionTexte">Réservé aux partenaires Google Ads.<br />Ouvrez le <strong>lien personnel</strong> que Tony vous a envoyé (SMS ou WhatsApp) : vous serez connecté automatiquement.</p>
     <p class="p-petit">Ensuite, ajoutez cette page à l'écran d'accueil de votre téléphone pour l'avoir comme une appli.</p>
+    <form class="p-admin" id="pFormAdmin">
+      <b>🔐 Accès administrateur</b>
+      <span>Réservé à Tony</span>
+      <div class="p-admin-champ">
+        <input id="pCodeAdmin" name="code" type="password" placeholder="Code administrateur" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required />
+        <button type="button" class="p-admin-oeil" id="pOeil" aria-label="Afficher le code">👁</button>
+      </div>
+      <div class="p-erreur" id="pErreurAdmin" role="alert" hidden></div>
+      <button class="p-bouton" type="submit" id="pAdminOk">Se connecter</button>
+    </form>
   </main>
 
   <main id="pAppli" hidden>
@@ -237,6 +247,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261117"></script>
+  <script src="/js/partenaires.js?v=20261118"></script>
 </body>
 </html>

@@ -1240,6 +1240,30 @@
     });
   }
 
+  // ----- Connexion administrateur par code -----
+  $("pOeil").addEventListener("click", function () {
+    var c = $("pCodeAdmin"), voir = c.type === "password";
+    c.type = voir ? "text" : "password";
+    this.setAttribute("aria-label", voir ? "Masquer le code" : "Afficher le code");
+  });
+  $("pFormAdmin").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var bouton = $("pAdminOk"), erreur = $("pErreurAdmin");
+    erreur.hidden = true;
+    bouton.disabled = true;
+    fetch("/api/partenaires/connexion-admin", {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: $("pCodeAdmin").value }),
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j.ok, j: j }; }); })
+      .then(function (res) {
+        if (res.ok) { location.replace("/partenaires"); return; }
+        erreur.textContent = res.j.error || "Connexion impossible, réessayez.";
+        erreur.hidden = false;
+        bouton.disabled = false;
+      })
+      .catch(function () { erreur.textContent = "Connexion impossible, réessayez."; erreur.hidden = false; bouton.disabled = false; });
+  });
+
   // ----- Demarrage -----
   if (new URLSearchParams(location.search).get("lien") === "invalide") {
     afficherConnexion("Ce lien n'est plus valable. Demandez à Tony de vous renvoyer votre lien personnel.");
