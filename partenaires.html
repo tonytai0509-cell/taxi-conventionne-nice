@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261119" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261120" />
 </head>
 <body>
   <header class="p-haut">
@@ -136,6 +136,9 @@
           <select id="pSmsChauffeur" class="p-select"></select>
           <label class="p-rub-label" for="pSmsNumero">Ou un autre numéro</label>
           <div class="p-ligne"><input id="pSmsNumero" type="tel" placeholder="06 …" maxlength="30" /><button class="p-bouton p-bouton-petit" id="pSmsOk" type="button">Enregistrer</button></div>
+          <div class="p-sous-titre">Vos courses du jour même</div>
+          <p class="p-petit">SMS sur votre ligne perso quand une réservation QR code, site ou d'un de vos clients est pour aujourd'hui.</p>
+          <div class="p-ligne"><input id="pSmsPerso" type="tel" placeholder="06 …" maxlength="30" /><button class="p-bouton p-bouton-petit" id="pSmsPersoOk" type="button">Enregistrer</button></div>
         </div>
       </div>
 
@@ -251,6 +254,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261119"></script>
+  <script src="/js/partenaires.js?v=20261120"></script>
 </body>
 </html>

@@ -229,6 +229,27 @@ export async function ajouterReservationAds(env, d, reference) {
   return { ok: true, id: r.meta && r.meta.last_row_id };
 }
 
+// Course de Tony reservee pour le jour meme (QR code, site, ses clients) :
+// SMS sur sa ligne perso (reglage « sms_perso » dans Gestion), s'il est rempli.
+async function prevenirTonyJourMeme(env, d) {
+  if (!env.SMS_GATEWAY_USERNAME || !env.SMS_GATEWAY_PASSWORD || d.date !== aujourdhuiParis()) return;
+  const r = await env.DB.prepare("SELECT valeur FROM reglages WHERE cle = 'sms_perso'").first();
+  const numero = versInternational((r && r.valeur) || "");
+  if (numero.length < 10) return;
+  const h = d.pcADefinir ? "PC à définir (RDV " + String(d.heureRdv || "").replace(":", "h") + ")" : String(d.heurePc || d.heureRdv || "").replace(":", "h");
+  const message = `🚕 Réservation pour AUJOURD'HUI ${h} : ${d.nom}${d.telephone ? " " + d.telephone : ""}, ${d.priseEnCharge} → ${d.destination}. A confirmer : taxi-conventionne06.fr/partenaires`;
+  try {
+    await fetch("https://api.sms-gate.app/3rdparty/v1/messages?skipPhoneValidation=true", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${env.SMS_GATEWAY_USERNAME}:${env.SMS_GATEWAY_PASSWORD}`)}` },
+      body: JSON.stringify({ textMessage: { text: message }, phoneNumbers: [numero], priority: 100 }),
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (e) {
+    // Notification de confort : le mail part de toute facon.
+  }
+}
+
 // Reservation du site qui revient a Tony : gardee pour son recap « Mes courses ».
 export async function ajouterMaCourse(env, d, reference) {
   if (!partenairesActifs(env)) return { ok: false };
@@ -242,6 +263,7 @@ export async function ajouterMaCourse(env, d, reference) {
     .bind(reference, d.date, d.pcADefinir ? null : d.heurePc || null, d.heureRdv || null, d.pcADefinir ? 1 : 0, d.type, d.origine || "site",
       d.priseEnCharge, d.destination, d.nom, d.telephone, d.telephone2 || null, reservePar, d.commentaire || null, options || null)
     .run();
+  await prevenirTonyJourMeme(env, d);
   return { ok: true };
 }
 
@@ -749,7 +771,16 @@ export async function routePartenaires(request, env, url) {
 
   // Ligne de permanence : seul numero qui recoit les SMS des reservations.
   if (sousChemin === "/admin/sms" && methode === "GET") {
-    return json({ ok: true, numero: await numeroPermanence(env.DB) });
+    const perso = await env.DB.prepare("SELECT valeur FROM reglages WHERE cle = 'sms_perso'").first();
+    return json({ ok: true, numero: await numeroPermanence(env.DB), perso: (perso && perso.valeur) || "" });
+  }
+  // Ligne perso de Tony : SMS pour ses courses reservees pour le jour meme.
+  if (sousChemin === "/admin/sms-perso" && methode === "POST") {
+    const b = await lireCorps(request);
+    const numero = texte(b.numero, 30);
+    await env.DB.prepare("INSERT INTO reglages (cle, valeur) VALUES ('sms_perso', ?) ON CONFLICT (cle) DO UPDATE SET valeur = excluded.valeur")
+      .bind(numero || null).run();
+    return json({ ok: true, numero });
   }
   if (sousChemin === "/admin/sms" && methode === "POST") {
     const b = await lireCorps(request);
