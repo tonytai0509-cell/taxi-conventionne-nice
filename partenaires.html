@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/css/partenaires.css?v=20261118" />
+<link rel="stylesheet" href="/css/partenaires.css?v=20261119" />
 </head>
 <body>
   <header class="p-haut">
@@ -88,7 +88,11 @@
     </section>
 
     <section id="vMes" hidden>
-      <div class="p-nav-date">
+      <div class="p-segment p-segment-mes" id="pModeMes">
+        <label><input type="radio" name="modeMes" value="a-saisir" checked /><span id="pModeASaisir">À saisir</span></label>
+        <label><input type="radio" name="modeMes" value="semaine" /><span>Par semaine</span></label>
+      </div>
+      <div class="p-nav-date" id="pMesNav" hidden>
         <button id="pMesAvant" type="button" aria-label="Semaine précédente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
         <div class="p-nav-date-txt"><b id="pMesTitre"></b></div>
         <button id="pMesApres" type="button" aria-label="Semaine suivante"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -247,6 +251,6 @@
 
   <div class="p-message" id="pMessage" hidden></div>
   <script src="/js/etablissements.js?v=20261106"></script>
-  <script src="/js/partenaires.js?v=20261118"></script>
+  <script src="/js/partenaires.js?v=20261119"></script>
 </body>
 </html>

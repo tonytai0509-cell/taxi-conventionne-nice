@@ -711,9 +711,13 @@ export async function routePartenaires(request, env, url) {
     let fin = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("fin") || "") ? url.searchParams.get("fin") : decalerJours(debut, 6);
     if (fin < debut) fin = debut;
     if (fin > decalerJours(debut, 62)) fin = decalerJours(debut, 62);
-    const { results } = await env.DB.prepare(
-      "SELECT * FROM mes_courses WHERE date >= ? AND date <= ? ORDER BY date, COALESCE(heure_pc, heure_rdv), id"
-    ).bind(debut, fin).all();
+    // « À saisir » : toutes les reservations pas encore saisies, quelle que soit
+    // la date de la course (passees encore gardees comprises).
+    const aSaisir = url.searchParams.get("aSaisir") === "1";
+    const { results } = await (aSaisir
+      ? env.DB.prepare("SELECT * FROM mes_courses WHERE saisie = 0 ORDER BY date, COALESCE(heure_pc, heure_rdv), id")
+      : env.DB.prepare("SELECT * FROM mes_courses WHERE date >= ? AND date <= ? ORDER BY date, COALESCE(heure_pc, heure_rdv), id").bind(debut, fin)
+    ).all();
     return json({
       ok: true,
       debut,

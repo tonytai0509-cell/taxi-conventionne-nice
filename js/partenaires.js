@@ -481,13 +481,49 @@
     return d;
   }
 
+  var modeMes = "a-saisir";
+
+  // Liste des reservations groupees par jour (« Aujourd'hui · Lundi 2 novembre »).
+  function afficherGroupesMes(liste, courses) {
+    var groupe = null, dateCourante = null;
+    courses.forEach(function (c) {
+      if (c.date !== dateCourante) {
+        dateCourante = c.date;
+        var t = titreJour(c.date).replace(/(^|· )(\S)/g, function (m, avant, l) { return avant + l.toUpperCase(); });
+        var d = new Date(c.date + "T12:00:00");
+        if (d.getFullYear() !== new Date().getFullYear()) t += " " + d.getFullYear();
+        liste.appendChild(el("h3", "p-mes-jour" + (c.date < isoAujourdhui() ? " passe" : ""), t));
+        groupe = el("div", "p-mes-groupe");
+        liste.appendChild(groupe);
+      }
+      groupe.appendChild(ligneMes(c));
+    });
+  }
+
   function chargerMes() {
+    var liste = $("pListeMes");
+    $("pMesNav").hidden = modeMes !== "semaine";
+    // Mode « À saisir » (par defaut) : toutes les reservations a confirmer et
+    // saisir, sans avoir a chercher la bonne semaine.
+    if (modeMes === "a-saisir") {
+      adsSemaine = [];
+      periodeMes = "à saisir";
+      api("GET", "/admin/mes-courses?aSaisir=1").then(function (r) {
+        mesCourses = r.courses;
+        liste.textContent = "";
+        var n = r.courses.length;
+        $("pModeASaisir").textContent = "À saisir" + (n ? " (" + n + ")" : "");
+        $("pMesCompte").textContent = n ? n + " réservation" + (n > 1 ? "s" : "") + " à saisir" : "Tout est saisi";
+        if (!n) { liste.appendChild(carteVide("Tout est saisi 👍", "Les nouvelles réservations du site apparaîtront ici.")); return; }
+        afficherGroupesMes(liste, r.courses);
+      }).catch(function () {});
+      return;
+    }
     var fin = decaler(semaineMes, 6);
     var d1 = new Date(semaineMes + "T12:00:00"), d2 = new Date(fin + "T12:00:00");
     $("pMesTitre").textContent = d1.getDate() + " " + MOIS_COURT[d1.getMonth()] + (d1.getFullYear() !== d2.getFullYear() ? " " + d1.getFullYear() : "") +
       " – " + d2.getDate() + " " + MOIS_COURT[d2.getMonth()] + " " + d2.getFullYear();
     periodeMes = "du " + d1.getDate() + " " + MOIS[d1.getMonth()] + " au " + d2.getDate() + " " + MOIS[d2.getMonth()];
-    var liste = $("pListeMes");
     // Courses Google Ads de la meme semaine, pour le recap « Copier ».
     adsSemaine = [];
     api("GET", "/courses?debut=" + semaineMes + "&fin=" + fin).then(function (r) {
@@ -502,17 +538,11 @@
       var n = r.courses.length, aSaisir = r.courses.filter(function (c) { return !c.saisie; }).length;
       $("pMesCompte").textContent = n + " réservation" + (n > 1 ? "s" : "") + " · " + aSaisir + " à saisir";
       if (!n) { liste.appendChild(carteVide("Aucune réservation cette semaine", "Vos réservations du site apparaîtront ici.")); return; }
-      var groupe = null, dateCourante = null;
-      r.courses.forEach(function (c) {
-        if (c.date !== dateCourante) {
-          dateCourante = c.date;
-          var t = titreJour(c.date).replace(/(^|· )(\S)/g, function (m, avant, l) { return avant + l.toUpperCase(); });
-          liste.appendChild(el("h3", "p-mes-jour", t));
-          groupe = el("div", "p-mes-groupe");
-          liste.appendChild(groupe);
-        }
-        groupe.appendChild(ligneMes(c));
-      });
+      afficherGroupesMes(liste, r.courses);
+    }).catch(function () {});
+    // Le compteur de l'onglet « À saisir » reste a jour.
+    api("GET", "/admin/mes-courses?aSaisir=1").then(function (r) {
+      $("pModeASaisir").textContent = "À saisir" + (r.courses.length ? " (" + r.courses.length + ")" : "");
     }).catch(function () {});
   }
 
@@ -1090,6 +1120,10 @@
     $("pJourApres").addEventListener("click", function () { jour = decaler(jour, 1); chargerJour(); });
     $("pMoisAvant").addEventListener("click", function () { mois = decalerMois(mois, -1); chargerBilan(); });
     $("pMoisApres").addEventListener("click", function () { mois = decalerMois(mois, 1); chargerBilan(); });
+    $("pModeMes").addEventListener("change", function (e) {
+      modeMes = e.target.value;
+      chargerMes();
+    });
     $("pMesAvant").addEventListener("click", function () { semaineMes = decaler(semaineMes, -7); chargerMes(); });
     $("pMesApres").addEventListener("click", function () { semaineMes = decaler(semaineMes, 7); chargerMes(); });
     $("pCopierTete").addEventListener("click", function () {

@@ -431,3 +431,5 @@ body.p-feuille-ouverte { overflow: hidden; }
 .p-admin-champ input { width: 100%; background: #fff; border: 1.5px solid var(--trait); border-radius: 11px; padding: 11px 46px 11px 12px; font-size: 16px; color: #222; }
 .p-admin-oeil { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; font-size: 17px; cursor: pointer; }
 .p-admin .p-erreur { margin-top: 8px; }
+.p-segment-mes { margin: 14px 16px 6px; }
+.p-mes-jour.passe { color: var(--rouge); }
