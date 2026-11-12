@@ -28,6 +28,7 @@
     ["Centre Antoine Lacassagne (bâtiment B)", "calb", "33 avenue de Valombrose, 06189 Nice"],
     ["Hôpital Privé Arnault Tzanck Mougins", "iatmougins tzanckmougins", "122 avenue du Docteur Maurice Donat, 06250 Mougins"],
     ["Hôpital Sainte-Marie", "stemarie saintemarie", "87 avenue Joseph Raybaud, Nice"],
+    ["Centre Hélio-Marin (CHM)", "chm heliomarin", "1090 avenue Julia, 06220 Vallauris"],
     ["Centre Hospitalier Princesse Grace (CHPG)", "chpg princesse grace monaco", "1 avenue Pasteur, 98000 Monaco"],
   ];
 
