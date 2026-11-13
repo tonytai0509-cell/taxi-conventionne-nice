@@ -110,6 +110,8 @@ const TAILLE_MAX_FACTURE = 1800 * 1024;
 const COLONNES = [
   "ALTER TABLE courses ADD COLUMN caree_par INTEGER",
   "ALTER TABLE courses ADD COLUMN caree_le TEXT",
+  // Course prise ou mise dans Caree depuis le groupe Telegram « Easy Web » (prenom du chauffeur).
+  "ALTER TABLE courses ADD COLUMN caree_telegram TEXT",
   // Cle du lien personnel gardee (partenaires seulement, jamais l'admin) pour
   // pouvoir renvoyer le lien a un chauffeur qui l'a perdu.
   "ALTER TABLE partenaires ADD COLUMN cle TEXT",
@@ -377,8 +379,9 @@ function vueCourse(c, moi, noms) {
     origine: c.origine,
     parTelephone: c.ajoutee_par != null,
     ajouteePar: c.ajoutee_par != null ? noms[c.ajoutee_par] || "?" : null,
-    dansCaree: c.caree_par != null,
-    careePar: c.caree_par != null ? (c.caree_par === moi.id ? "vous" : noms[c.caree_par] || "?") : null,
+    dansCaree: c.caree_par != null || !!c.caree_telegram,
+    careePar: c.caree_par != null ? (c.caree_par === moi.id ? "vous" : noms[c.caree_par] || "?")
+      : c.caree_telegram ? `${c.caree_telegram} (Telegram)` : null,
     careeLe: c.caree_le,
     annulee: !!c.annulee,
     client: { nom: c.client_nom, telephone: c.client_tel, telephone2: c.telephone2 },
@@ -455,6 +458,22 @@ export async function routePartenaires(request, env, url) {
     const existe = await env.DB.prepare("SELECT id FROM partenaires WHERE cle_hash = ?").bind(h).first();
     if (!existe) await env.DB.prepare("INSERT INTO partenaires (nom, cle_hash, admin, peut_ajouter) VALUES ('Tony', ?, 1, 1)").bind(h).run();
     return json({ ok: true }, 200, { "Set-Cookie": cookieSession(code) });
+  }
+
+  // Le bot Telegram (groupe « Easy Web ») signale qu'un chauffeur a pris la course
+  // ou l'a mise dans Caree : elle apparait « dans Caree » ici aussi (pas de doublon).
+  if (chemin === "/api/partenaires/telegram" && methode === "POST") {
+    const b = await lireCorps(request);
+    const cle = typeof b.cle === "string" ? b.cle : "";
+    if (!env.DISPATCH_CLE || !cle || (await sha256(cle)) !== (await sha256(env.DISPATCH_CLE))) {
+      return json({ ok: false, error: "Refusé" }, 403);
+    }
+    const id = Number(b.id);
+    const nom = String(b.nom || "").replace(/[\u0000-\u001f<>]/g, "").slice(0, 40) || "?";
+    if (!Number.isInteger(id) || id <= 0) return json({ ok: false, error: "Course inconnue" }, 400);
+    await env.DB.prepare("UPDATE courses SET caree_telegram = ?, caree_le = datetime('now') WHERE id = ? AND caree_par IS NULL AND caree_telegram IS NULL")
+      .bind(nom, id).run();
+    return json({ ok: true });
   }
 
   if (!chemin.startsWith("/api/partenaires")) return null;
@@ -605,7 +624,7 @@ export async function routePartenaires(request, env, url) {
     if (!moi.admin) return json({ ok: false, error: "Réservé à l'administrateur." }, 403);
     const mois = /^\d{4}-\d{2}$/.test(url.searchParams.get("mois") || "") ? url.searchParams.get("mois") : aujourdhuiParis().slice(0, 7);
     const { results: courses } = await env.DB.prepare(
-      "SELECT prise_par, ajoutee_par, caree_par FROM courses WHERE date LIKE ? AND annulee = 0"
+      "SELECT prise_par, ajoutee_par, caree_par, caree_telegram FROM courses WHERE date LIKE ? AND annulee = 0"
     ).bind(mois + "-%").all();
     const { results: parts } = await env.DB.prepare("SELECT id, nom, actif FROM partenaires ORDER BY id").all();
     const { results: budgets } = await env.DB.prepare("SELECT partenaire_id, montant, paye FROM budget WHERE mois = ?").bind(mois).all();
@@ -634,7 +653,7 @@ export async function routePartenaires(request, env, url) {
       total,
       parTelephone: liste.filter((c) => c.ajoutee_par != null).length,
       nonPrises: liste.filter((c) => c.prise_par == null).length,
-      pasDansCaree: liste.filter((c) => c.caree_par == null).length,
+      pasDansCaree: liste.filter((c) => c.caree_par == null && !c.caree_telegram).length,
       depense: montant,
       coutParCourse: montant != null && total ? Math.round((montant / total) * 100) / 100 : null,
       partenaires: parPartenaire,

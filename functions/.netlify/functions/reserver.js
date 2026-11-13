@@ -547,6 +547,10 @@ export async function onRequestPost(context) {
     await ajouterMaCourse(env, donnees, reference).catch(() => null);
   }
 
+  // Toutes les reservations du site partent aussi dans le groupe Telegram « Easy Web »
+  // (sans nom ni telephone du patient), avec l'origine : site, QR code, ancien client.
+  const versDispatch = envoyerVersDispatch(env, donnees, reference, versPartenaires && versPartenaires.ok ? versPartenaires.id : null);
+
   const [resultatAgenda, resultatEmail] = await Promise.all([
     versPartenaires && versPartenaires.ok
       ? Promise.resolve({ ok: true, partenaires: true })
@@ -554,7 +558,38 @@ export async function onRequestPost(context) {
     envoyerEmailConfirmation(env, donnees, reference),
   ]);
 
+  await versDispatch;
   return jsonResponse(200, { ok: true, reference, agenda: resultatAgenda, email: resultatEmail });
+}
+
+// Bot « Dispatch » : DISPATCH_URL = adresse du serveur du bot (Railway),
+// DISPATCH_CLE = mot de passe partage (le meme que COURSES_SITE_CLE sur Railway).
+async function envoyerVersDispatch(env, d, reference, partenaireId) {
+  const base = String(env.DISPATCH_URL || "").trim().replace(/\/+$/, "");
+  if (!/^https:\/\//.test(base) || !env.DISPATCH_CLE) return { ok: false, raison: "non configure" };
+  try {
+    const r = await fetch(`${base}/api/site`, {
+      method: "POST",
+      signal: AbortSignal.timeout(5000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cle: env.DISPATCH_CLE,
+        reference,
+        origine: d.origine,
+        partenaireId,
+        date: d.date,
+        heurePc: d.pcADefinir ? null : d.heurePc || null,
+        heureRdv: d.heureRdv || null,
+        type: d.type,
+        depart: d.priseEnCharge,
+        destination: d.destination,
+        options: [d.accompagnant ? "accompagnant" : "", d.btoRetour ? "bon de transport au retour" : ""].filter(Boolean).join(", "),
+      }),
+    });
+    return { ok: r.ok };
+  } catch (e) {
+    return { ok: false, raison: "bot injoignable" };
+  }
 }
 
 // Reservation posee directement sur le planning de l'appli EasyTaxi (meme
