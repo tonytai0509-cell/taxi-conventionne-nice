@@ -584,6 +584,9 @@ async function envoyerVersDispatch(env, d, reference, partenaireId) {
         depart: d.priseEnCharge,
         destination: d.destination,
         options: [d.accompagnant ? "accompagnant" : "", d.btoRetour ? "bon de transport au retour" : ""].filter(Boolean).join(", "),
+        // Patient : affiche dans le groupe pour les courses du jour meme, sinon dans l'onglet « Caree »
+        // du chauffeur qui la prend (choix de Tony).
+        patient: { nom: d.nom || "", telephone: d.telephone || "", telephone2: d.telephone2 || "" },
       }),
     });
     return { ok: r.ok };
