@@ -52,6 +52,15 @@
     window.addEventListener("load", function () { setTimeout(placer, 50); });
   }
 
+  // Suivi Google Ads : clic sur « Appeler » (lien tel:). C'est un CLIC, pas un appel abouti.
+  // Rien d'autre n'est envoye (ni numero, ni page de formulaire, ni donnees du patient).
+  document.addEventListener("click", function (e) {
+    var lien = e.target.closest && e.target.closest('a[href^="tel:"]');
+    var cible = (window.ADS_CONVERSIONS || {}).appel;
+    if (!lien || !cible || typeof gtag !== "function") return;
+    gtag("event", "conversion", { send_to: cible });
+  });
+
   // Origine du visiteur, gardee 30 jours sur ce telephone : pub Google Ads
   // (gclid / gbraid / wbraid ou utm cpc) ou QR code / cartes de Tony (?src=qr).
   // Sert a trier les reservations (espace partenaires ou Tony).
@@ -248,12 +257,36 @@
     // Swap "prise en charge" / "destination" addresses
     var boutonInverser = document.getElementById("rBoutonInverser");
     var priseEnChargeInput = document.getElementById("f-prise-en-charge");
+    var communeDepartInput = document.getElementById("f-commune-depart");
+    var communeArriveeInput = document.getElementById("f-commune-arrivee");
+    function inverserTrajet() {
+      var temp = priseEnChargeInput.value;
+      priseEnChargeInput.value = destinationInput.value;
+      destinationInput.value = temp;
+      if (communeDepartInput && communeArriveeInput) {
+        var c = communeDepartInput.value;
+        communeDepartInput.value = communeArriveeInput.value;
+        communeArriveeInput.value = c;
+      }
+    }
     if (boutonInverser && priseEnChargeInput && destinationInput) {
-      boutonInverser.addEventListener("click", function () {
-        var temp = priseEnChargeInput.value;
-        priseEnChargeInput.value = destinationInput.value;
-        destinationInput.value = temp;
-      });
+      boutonInverser.addEventListener("click", inverserTrajet);
+    }
+    // Pages de campagne : bouton « Inverser le trajet » (communes + adresses).
+    var boutonInverserTrajet = document.getElementById("rBoutonInverserTrajet");
+    if (boutonInverserTrajet && priseEnChargeInput && destinationInput) {
+      boutonInverserTrajet.addEventListener("click", inverserTrajet);
+    }
+
+    // Aller simple / aller-retour : l'heure de retour (si connue) n'apparait qu'en aller-retour.
+    var radioAR = document.getElementById("f-trajet-ar");
+    var radioAller = document.getElementById("f-trajet-aller");
+    var blocRetour = document.getElementById("rBlocRetour");
+    function majTrajet() { if (blocRetour) blocRetour.hidden = !radioAR.checked; }
+    if (radioAR && radioAller) {
+      radioAR.addEventListener("change", majTrajet);
+      radioAller.addEventListener("change", majTrajet);
+      majTrajet();
     }
 
     // Suggestions d'adresses pendant la saisie (etablissements connus + BAN).
@@ -397,6 +430,11 @@
         telReservant: data.get("qui") === "pro" ? data.get("telReservant") || "" : "",
         telephone2: data.get("telephone2") || "",
         commentaire: data.get("commentaire") || "",
+        communeDepart: data.get("communeDepart") || "",
+        communeArrivee: data.get("communeArrivee") || "",
+        trajet: data.get("trajet") || "",
+        heureRetour: data.get("trajet") === "ar" ? data.get("heureRetour") || "" : "",
+        page: reserveForm.getAttribute("data-page") || "",
         origine: origineVisite(),
       };
 
@@ -440,12 +478,10 @@
             return;
           }
 
+          // Conversion « demande envoyee » : seulement l'evenement, aucune donnee saisie.
+          var cibleDemande = (window.ADS_CONVERSIONS || {}).demande || "AW-18403307378/lmN8CM-whO4cEPLesMdE";
           if (typeof gtag === "function") {
-            gtag("event", "conversion", {
-              send_to: "AW-18403307378/lmN8CM-whO4cEPLesMdE",
-              value: 1.0,
-              currency: "EUR",
-            });
+            gtag("event", "conversion", { send_to: cibleDemande, value: 1.0, currency: "EUR" });
           }
 
           afficherStatus(
@@ -455,6 +491,7 @@
           );
           reserveForm.reset();
           if (radioMedical) { radioMedical.checked = true; majOptionsMedical(); }
+          if (radioAR && radioAller) majTrajet();
         })
         .catch(function () {
           afficherStatus(

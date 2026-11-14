@@ -30,6 +30,12 @@
 import { relaisConfigure, lienConfirmationSms } from "../../confirmerSms.js";
 import { origineReservation, ajouterReservationAds, ajouterMaCourse } from "../../partenaires.js";
 
+function avecCommune(adresse, commune) {
+  if (!adresse || !commune) return adresse;
+  const n = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return n(adresse).includes(n(commune)) ? adresse : `${adresse}, ${commune}`.slice(0, CHAMPS_TEXTE_MAX + 62);
+}
+
 function nettoyerTexte(valeur, longueurMax) {
   if (typeof valeur !== "string") return "";
   return valeur.replace(/[\r\n\t\x00-\x1f\x7f]+/g, " ").trim().slice(0, longueurMax);
@@ -470,7 +476,8 @@ export async function onRequestPost(context) {
     return jsonResponse(200, { ok: true, reference: genererReference(), agenda: { ok: true }, email: { ok: true } });
   }
 
-  const champsTexte = ["prenom", "nom", "telephone", "priseEnCharge", "destination", "date", "heureRdv", "heurePc", "reservePar", "telReservant", "telephone2", "commentaire"];
+  const champsTexte = ["prenom", "nom", "telephone", "priseEnCharge", "destination", "date", "heureRdv", "heurePc", "reservePar", "telReservant", "telephone2", "commentaire",
+    "communeDepart", "communeArrivee", "trajet", "heureRetour", "page"];
   for (const champ of champsTexte) {
     if (body[champ] !== undefined && typeof body[champ] !== "string") {
       return jsonResponse(400, { ok: false, error: `Champ ${champ} invalide` });
@@ -479,8 +486,15 @@ export async function onRequestPost(context) {
 
   const nom = nettoyerTexte([body.prenom, body.nom].filter(Boolean).join(" "), CHAMPS_TEXTE_MAX);
   const telephone = nettoyerTexte(body.telephone, TELEPHONE_MAX);
-  const priseEnCharge = nettoyerTexte(body.priseEnCharge, CHAMPS_TEXTE_MAX);
-  const destination = nettoyerTexte(body.destination, CHAMPS_TEXTE_MAX);
+  // Pages de campagne (Nice, Saint-Laurent-du-Var, Cagnes-sur-Mer, Carros) : commune de
+  // depart et d'arrivee demandees a part. On les ajoute a l'adresse si elle ne les cite pas
+  // deja, pour que la centrale, l'agenda et le dispatch voient le trajet complet.
+  const communeDepart = nettoyerTexte(body.communeDepart, 60);
+  const communeArrivee = nettoyerTexte(body.communeArrivee, 60);
+  const priseEnCharge = avecCommune(nettoyerTexte(body.priseEnCharge, CHAMPS_TEXTE_MAX), communeDepart);
+  const destination = avecCommune(nettoyerTexte(body.destination, CHAMPS_TEXTE_MAX), communeArrivee);
+  const allerRetour = body.trajet === "ar";
+  const heureRetour = typeof body.heureRetour === "string" ? body.heureRetour.trim() : "";
   const date = typeof body.date === "string" ? body.date.trim() : "";
   const heureRdv = typeof body.heureRdv === "string" ? body.heureRdv.trim() : "";
   const heurePc = typeof body.heurePc === "string" ? body.heurePc.trim() : "";
@@ -495,7 +509,7 @@ export async function onRequestPost(context) {
   if (!dateValide(date)) {
     return jsonResponse(400, { ok: false, error: "Date invalide" });
   }
-  if (!heureValide(heurePriseEnCharge) || (heureRdv && !heureValide(heureRdv))) {
+  if (!heureValide(heurePriseEnCharge) || (heureRdv && !heureValide(heureRdv)) || (heureRetour && !heureValide(heureRetour))) {
     return jsonResponse(400, { ok: false, error: "Heure invalide" });
   }
 
@@ -532,7 +546,11 @@ export async function onRequestPost(context) {
     reservePar: nettoyerTexte(body.reservePar, CHAMPS_TEXTE_MAX),
     telReservant: nettoyerTexte(body.telReservant, TELEPHONE_MAX),
     telephone2: nettoyerTexte(body.telephone2, TELEPHONE_MAX),
-    commentaire: nettoyerTexte(body.commentaire, 500),
+    commentaire: [
+      allerRetour ? `ALLER-RETOUR (retour ${heureRetour ? "vers " + heureRetour.replace(":", "h") : "heure a preciser"})` : "",
+      nettoyerTexte(body.commentaire, 500),
+    ].filter(Boolean).join(" - ").slice(0, 560),
+    allerRetour,
   };
 
   // Tri : pub Google Ads (client inconnu) -> espace partenaires ; QR code,
@@ -583,7 +601,7 @@ async function envoyerVersDispatch(env, d, reference, partenaireId) {
         type: d.type,
         depart: d.priseEnCharge,
         destination: d.destination,
-        options: [d.accompagnant ? "accompagnant" : "", d.btoRetour ? "bon de transport au retour" : ""].filter(Boolean).join(", "),
+        options: [d.allerRetour ? "aller-retour" : "", d.accompagnant ? "accompagnant" : "", d.btoRetour ? "bon de transport au retour" : ""].filter(Boolean).join(", "),
         // Patient : affiche dans le groupe pour les courses du jour meme, sinon dans l'onglet « Caree »
         // du chauffeur qui la prend (choix de Tony).
         patient: { nom: d.nom || "", telephone: d.telephone || "", telephone2: d.telephone2 || "" },
