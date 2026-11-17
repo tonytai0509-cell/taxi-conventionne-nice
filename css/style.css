@@ -1072,6 +1072,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 }
 .mobile-action-bar .btn-outline:hover { background: rgba(255, 255, 255, 0.1); }
 .mobile-action-bar .btn-outline::after {
+  display: none; /* reflet arrêté (demande du 17/11) */
   content: "";
   position: absolute;
   inset: 0;
