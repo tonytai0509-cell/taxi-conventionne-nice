@@ -5,8 +5,8 @@ Les pages d'arrivée existent déjà sur le site, il n'y a rien à recréer :
 | Groupe d'annonces | URL finale |
 |---|---|
 | Dialyse | https://taxi-conventionne06.fr/pub-taxi-dialyse.html (version pub centrée sur le téléphone, noindex) |
-| Chimiothérapie | https://taxi-conventionne06.fr/taxi-chimiotherapie-nice.html |
-| Radiothérapie | https://taxi-conventionne06.fr/taxi-radiotherapie-nice.html |
+| Chimiothérapie | https://taxi-conventionne06.fr/pub-taxi-chimiotherapie.html (version pub centrée sur le téléphone, noindex) |
+| Radiothérapie | https://taxi-conventionne06.fr/pub-taxi-radiotherapie.html (version pub centrée sur le téléphone, noindex) |
 
 Règles : titres 30 caractères maximum, descriptions 90 maximum (vérifiés).
 Aucune promesse de remboursement à 100 % : on écrit « prise en charge CPAM sur prescription ».
