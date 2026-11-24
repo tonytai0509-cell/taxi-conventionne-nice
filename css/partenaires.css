@@ -433,3 +433,5 @@ body.p-feuille-ouverte { overflow: hidden; }
 .p-admin .p-erreur { margin-top: 8px; }
 .p-segment-mes { margin: 14px 16px 6px; }
 .p-mes-jour.passe { color: var(--rouge); }
+.p-sous-titre { margin: 16px 0 2px; padding-top: 12px; border-top: 1px solid #f0ebe0; font-weight: 800; font-size: 14px; color: var(--nuit); }
+.p-rub-corps .p-petit { margin: 2px 0 8px; }

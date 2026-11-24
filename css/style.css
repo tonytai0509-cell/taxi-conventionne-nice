@@ -1072,6 +1072,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); line-height: 1.65; }
 }
 .mobile-action-bar .btn-outline:hover { background: rgba(255, 255, 255, 0.1); }
 .mobile-action-bar .btn-outline::after {
+  display: none; /* reflet arrêté (demande du 17/11) */
   content: "";
   position: absolute;
   inset: 0;
@@ -1264,4 +1265,69 @@ body.saisie-adresse .mobile-action-bar { display: none !important; }
   .pub-tel .logo-text-block { display: none; }
   .pub-tel .logo-icon { width: 40px; height: 32px; }
   .pub-tel .header-inner { gap: 8px; }
+}
+
+/* ===== Pages de campagne Google Ads (trajets médicaux Nice ↔ …) ===== */
+.ads-hero { padding: 26px 0 30px; background: var(--paper, #fff); }
+.ads-hero .container { max-width: 760px; text-align: center; }
+.ads-hero-trajet {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 6px 14px;
+  border-radius: 999px; background: var(--gold-100); color: var(--navy-900);
+  font-weight: 700; font-size: 0.9rem; letter-spacing: 0.01em;
+}
+.ads-hero h1 { font-size: clamp(1.55rem, 5.4vw, 2.5rem); line-height: 1.15; margin: 0 0 12px; }
+.ads-hero-accroche { font-size: 1.05rem; color: var(--ink-soft); max-width: 46ch; margin: 0 auto; }
+.ads-hero-boutons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px auto 0; max-width: 520px; }
+.ads-hero-boutons .btn { justify-content: center; padding: 16px 12px; font-size: 1rem; width: 100%; }
+.ads-hero-numero { margin: 10px 0 0; font-size: 0.9rem; color: var(--ink-soft); }
+.ads-hero-numero a { color: var(--navy-900); font-weight: 700; }
+.ads-atouts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; list-style: none; padding: 0; margin: 16px 0 0; font-size: 0.86rem; color: var(--navy-800); font-weight: 600; }
+.ads-atouts li::before { content: "✓ "; color: var(--med-green, #1e8e3e); font-weight: 800; }
+
+.ads-trajets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; list-style: none; padding: 0; margin: 0; }
+.ads-trajet {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px;
+  background: #fff; border: 1.5px solid var(--line); color: var(--navy-900);
+}
+.ads-trajet-sens { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-500); }
+.ads-trajet b { font-size: 0.98rem; line-height: 1.35; }
+.ads-trajet b span { color: var(--gold-500); padding: 0 4px; }
+.ads-note { margin-top: 16px; font-size: 0.95rem; color: var(--ink-soft); }
+.ads-etapes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; list-style: none; padding: 0; margin: 0; counter-reset: etape; }
+.ads-etapes li { counter-increment: etape; padding: 16px; border-radius: 12px; background: #fff; border: 1.5px solid var(--line); font-size: 0.95rem; }
+.ads-etapes li::before {
+  content: counter(etape); display: inline-grid; place-items: center; width: 30px; height: 30px; margin-bottom: 8px;
+  border-radius: 50%; background: var(--navy-900); color: var(--gold-500); font-weight: 800;
+}
+.ads-etapes li b { display: block; color: var(--navy-900); margin-bottom: 4px; }
+.ads-prise-en-charge { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: var(--gold-100); color: var(--navy-900); font-size: 0.95rem; }
+
+/* Formulaire : communes, inverser, aller / aller-retour */
+.rcommunes { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; margin-top: 4px; }
+.rcommunes .rfield { margin: 0; }
+.rbouton-inverser-trajet {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 46px; padding: 0 12px;
+  border-radius: 10px; border: 1.5px solid var(--line); background: #fff; color: var(--navy-900);
+  font-weight: 700; font-size: 0.82rem; cursor: pointer; white-space: nowrap;
+}
+.rbouton-inverser-trajet:hover { border-color: var(--gold-500); }
+.rchoix-trajet label:has(input:checked) { border-color: var(--navy-900); background: var(--paper-alt); color: var(--navy-900); }
+.rchoix-trajet label:has(input:checked) .rchoix-coche { display: inline-flex; background: var(--navy-900); }
+#rBlocRetour[hidden] { display: none; }
+
+@media (max-width: 720px) {
+  .ads-hero { padding: 18px 0 22px; }
+  .ads-hero-accroche { font-size: 0.98rem; }
+  .ads-hero-boutons { margin-top: 16px; gap: 10px; }
+  .ads-hero-boutons .btn { padding: 15px 8px; font-size: 0.98rem; }
+  .ads-trajets, .ads-etapes { grid-template-columns: minmax(0, 1fr); }
+  .rcommunes { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "dep btn" "arr arr"; }
+  .rcommunes > div:first-child { grid-area: dep; }
+  .rcommunes > .rbouton-inverser-trajet { grid-area: btn; }
+  .rcommunes > div:last-child { grid-area: arr; }
+}
+@media (max-width: 400px) {
+  .ads-hero-boutons { grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+  .ads-hero-boutons .btn { padding: 14px 12px; font-size: 0.95rem; gap: 6px; }
+  .ads-hero-boutons .btn-primary svg { display: none; }
 }

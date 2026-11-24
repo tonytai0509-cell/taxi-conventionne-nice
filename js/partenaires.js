@@ -846,6 +846,7 @@
   function chargerSms() {
     Promise.all([api("GET", "/admin/sms"), api("GET", "/admin/partenaires")]).then(function (r) {
       $("pSmsNumero").value = r[0].numero || "";
+      $("pSmsPerso").value = r[0].perso || "";
       var qui = r[1].partenaires.filter(function (p) { return p.telephone && telephoneCle(p.telephone) === telephoneCle(r[0].numero); })[0];
       $("pSmsResume").textContent = r[0].numero ? "SMS envoyés à " + (qui ? qui.nom : r[0].numero) : "Aucun numéro : pas de SMS";
       var etat = $("pSmsEtat");
@@ -1256,6 +1257,12 @@
       }).catch(function (err) { message(err.message); });
     });
     $("pSmsOk").addEventListener("click", function () { enregistrerSms($("pSmsNumero").value.trim()); });
+    $("pSmsPersoOk").addEventListener("click", function () {
+      var n = $("pSmsPerso").value.trim();
+      api("POST", "/admin/sms-perso", { numero: n }).then(function () {
+        message(n ? "Vos courses du jour iront par SMS au " + n + "." : "Plus de SMS pour vos courses du jour.");
+      }).catch(function (e) { message(e.message); });
+    });
     $("pSmsChauffeur").addEventListener("change", function (e) {
       var o = e.target.selectedOptions[0];
       if (o && o.value) enregistrerSms(o.value, o.getAttribute("data-nom"));

@@ -16,12 +16,19 @@
     ["Clinique du Parc Impérial", "parc imperial cpi", "28 boulevard du Tzarewitch, 06000 Nice"],
     ["Clinique Saint-Antoine", "saint antoine st antoine sta", "7 avenue Durante, 06000 Nice"],
     ["Clinique Saint-François", "saint francois st francois stf", "10 boulevard Pasteur, 06000 Nice"],
+    ["Centre de Haute Énergie (CHE)", "che haute energie", "10 boulevard Pasteur, 06000 Nice"],
     ["Polyclinique Santa Maria", "santa maria psm", "57 avenue de la Californie, 06200 Nice"],
     ["Polyclinique Saint-Jean", "saint jean st jean stj cagnes", "92 avenue du Docteur Maurice Donat, 06800 Cagnes-sur-Mer"],
-    ["Institut Arnault Tzanck", "tzanck tz iat", "231 avenue du Docteur Maurice Donat, 06721 Saint-Laurent-du-Var"],
+    ["Institut Arnault Tzanck", "tzanck tz iat iatstlo iatslv", "231 avenue du Docteur Maurice Donat, 06721 Saint-Laurent-du-Var"],
     ["Aéroport Nice - Terminal 1", "aeroport t1", "Boulevard Maryse Bastié, 06200 Nice"],
     ["Aéroport Nice - Terminal 2", "aeroport t2", "Boulevard Jacqueline Auriol, 06200 Nice"],
     ["Gare de Nice-Ville", "gare thiers sncf", "Avenue Thiers, 06000 Nice"],
+    ["Hôpital Pasteur 1", "p1 pasteur1", "30 avenue de la Voie Romaine, 06000 Nice"],
+    ["Centre Antoine Lacassagne (bâtiment A)", "cala", "33 avenue de Valombrose, 06189 Nice"],
+    ["Centre Antoine Lacassagne (bâtiment B)", "calb", "33 avenue de Valombrose, 06189 Nice"],
+    ["Hôpital Privé Arnault Tzanck Mougins", "iatmougins tzanckmougins", "122 avenue du Docteur Maurice Donat, 06250 Mougins"],
+    ["Hôpital Sainte-Marie", "stemarie saintemarie", "87 avenue Joseph Raybaud, Nice"],
+    ["Centre Hélio-Marin (CHM)", "chm heliomarin", "1090 avenue Julia, 06220 Vallauris"],
   ];
 
   function sansAccents(t) {
@@ -37,7 +44,8 @@
     var exacts = [], autres = [];
     LISTE.forEach(function (e) {
       var mots = sansAccents(e[1]).split(" ");
-      if (mots.indexOf(cle) !== -1) exacts.push(e);
+      // « cal a », « iat mougins », « ste marie » : on compare aussi sans les espaces.
+      if (mots.indexOf(cle) !== -1 || mots.indexOf(cle.replace(/ /g, "")) !== -1) exacts.push(e);
       else if (cle.length >= 3 && sansAccents(e[0] + " " + e[1]).indexOf(cle) !== -1) autres.push(e);
     });
     return exacts.concat(autres).slice(0, 3).map(function (e) {
