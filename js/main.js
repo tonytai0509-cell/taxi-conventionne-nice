@@ -410,7 +410,7 @@
 
     // Monaco : course non assuree. On bloque la demande avant l'envoi pour
     // ne pas generer de reservation ni de cout publicitaire inutile.
-    var MOTS_MONACO = /monaco|monte[\s-]?carlo|fontvieille|la\s+condamine|98000|98100|moneghetti|larvotto/i;
+    var MOTS_MONACO = /monaco|chpg|princesse[s-]?grace|monte[\s-]?carlo|fontvieille|la\s+condamine|98000|98100|moneghetti|larvotto/i;
     var MESSAGE_MONACO =
       "Désolé, nous n'effectuons pas de courses vers ou depuis Monaco. " +
       "Merci de choisir un autre trajet.";
