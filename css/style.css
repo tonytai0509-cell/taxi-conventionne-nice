@@ -1230,3 +1230,38 @@ body.saisie-adresse .mobile-action-bar { display: none !important; }
 .rcard label:not(.rswitch):not(.rqui-option):not(.rchoix label):not(.consent-label) { margin: 16px 0 6px; }
 .rcard .rcard-title + label, .rcard .rcard-title + .rline label, .radresses > label:first-child { margin-top: 0; }
 .rpro > label:first-child { margin-top: 12px; }
+
+/* ===== Pages publicitaires centrées sur l'appel (pub-taxi-dialyse.html) ===== */
+.pub-tel .zone-chips li span {
+  display: inline-block;
+  padding: 9px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--navy-800);
+}
+.pub-tel .btn-header-tel { padding: 10px 16px; font-size: 0.9rem; }
+.pub-tel .btn-tel-xl {
+  gap: 12px;
+  padding: 18px 36px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  box-shadow: 0 10px 26px -10px rgba(200, 162, 74, 0.7);
+}
+.pub-tel .pub-reassure {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--navy-700);
+}
+.pub-tel .mobile-action-bar .btn-primary { width: 100%; font-size: 1.05rem; padding: 15px 18px; }
+@media (max-width: 900px) {
+  .pub-tel .btn-tel-xl { width: 100%; padding: 17px 20px; font-size: 1.1rem; }
+  .pub-tel .btn-header-tel { padding: 8px 12px; font-size: 0.85rem; flex: none; }
+  .pub-tel .logo-text-block { display: none; }
+  .pub-tel .logo-icon { width: 40px; height: 32px; }
+  .pub-tel .header-inner { gap: 8px; }
+}

@@ -4,7 +4,7 @@ Les pages d'arrivée existent déjà sur le site, il n'y a rien à recréer :
 
 | Groupe d'annonces | URL finale |
 |---|---|
-| Dialyse | https://taxi-conventionne06.fr/taxi-dialyse-nice.html |
+| Dialyse | https://taxi-conventionne06.fr/pub-taxi-dialyse.html (version pub centrée sur le téléphone, noindex) |
 | Chimiothérapie | https://taxi-conventionne06.fr/taxi-chimiotherapie-nice.html |
 | Radiothérapie | https://taxi-conventionne06.fr/taxi-radiotherapie-nice.html |
 
