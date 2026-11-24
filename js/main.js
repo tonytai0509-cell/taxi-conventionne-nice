@@ -408,8 +408,40 @@
     // deux evenements d'agenda pour une seule course.
     var envoiEnCours = false;
 
+    // Monaco : course non assuree. On bloque la demande avant l'envoi pour
+    // ne pas generer de reservation ni de cout publicitaire inutile.
+    var MOTS_MONACO = /monaco|monte[\s-]?carlo|fontvieille|la\s+condamine|98000|98100|moneghetti|larvotto/i;
+    var MESSAGE_MONACO =
+      "Désolé, nous n'effectuons pas de courses vers ou depuis Monaco. " +
+      "Merci de choisir un autre trajet.";
+    function trajetMonaco() {
+      var champs = [priseEnChargeInput, destinationInput, communeDepartInput, communeArriveeInput];
+      for (var i = 0; i < champs.length; i++) {
+        if (champs[i] && MOTS_MONACO.test(champs[i].value || "")) return true;
+      }
+      return false;
+    }
+    var statutMonacoAffiche = false;
+    function verifierMonaco() {
+      if (trajetMonaco()) {
+        afficherStatus("error", MESSAGE_MONACO);
+        statutMonacoAffiche = true;
+      } else if (statutMonacoAffiche && statusEl) {
+        statusEl.hidden = true;
+        statutMonacoAffiche = false;
+      }
+    }
+    [priseEnChargeInput, destinationInput, communeDepartInput, communeArriveeInput].forEach(function (c) {
+      if (c) { c.addEventListener("input", verifierMonaco); c.addEventListener("change", verifierMonaco); }
+    });
+
     reserveForm.addEventListener("submit", function (e) {
       e.preventDefault();
+      if (trajetMonaco()) {
+        afficherStatus("error", MESSAGE_MONACO);
+        statutMonacoAffiche = true;
+        return;
+      }
       if (envoiEnCours) return;
       envoiEnCours = true;
       var data = new FormData(reserveForm);
